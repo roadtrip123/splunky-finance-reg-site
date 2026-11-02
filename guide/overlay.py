@@ -82,6 +82,19 @@ INTEGRATION_KIND_WAS = ("2. Select the integration you want to use for your LLM 
 INTEGRATION_KIND_NOW = ("2. Select **Custom**: the judges use the same model gateway as the agent, "
                         f"and it appears in the evaluators as **{MODEL_ALIAS}**")
 
+# Why the faults are forced, said before the table rather than left to be inferred from it.
+FAULT_HEADING = "### Run one fault at a time\n"
+FAULT_WHY = """### Run one fault at a time
+
+**Why the failures are forced.** A well-behaved agent rarely gets these questions wrong, so you
+could wait a long time to see an evaluator catch a real mistake. The **Enable …** buttons in the
+presenter portal (`/demo-admin`) make the agent fail on purpose, each in one specific way: leaving
+part of the question unanswered, getting a total wrong, or answering about the wrong customer. That
+lets you watch each evaluator catch the failure it was built for, then pass again once you switch
+back to **Normal Answer**. Only the answer is forced. The evaluators are not staged: they score
+it exactly as they would a real mistake.
+"""
+
 # A worked example of one row of the fault table, captured by the instructor, because "enable,
 # ask, look" reads clearly and is still done out of order. Inserted after the table.
 FAULT_TABLE_END = "Then set the scenario back to **Normal Answer / Disabled Guardrails** and ask the same questions"
@@ -156,6 +169,7 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
     (PICKER_WAS, PICKER_NOW, 3),
     (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
+    (FAULT_HEADING, FAULT_WHY),
     (FAULT_TABLE_END, FAULT_EXAMPLE + FAULT_TABLE_END),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
     (

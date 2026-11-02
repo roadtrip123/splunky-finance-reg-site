@@ -180,3 +180,11 @@ def test_the_fault_table_is_followed_by_a_worked_example_in_order(upstream):
     images = Path(__file__).resolve().parent.parent / "app/static/img"
     for name in ("1-enable", "2-ask", "3-galileo"):
         assert (images / f"fault-incomplete-{name}.png").exists()
+
+
+def test_the_fault_section_explains_why_failures_are_forced(upstream):
+    overlaid = overlay.apply(upstream)
+    section = overlaid.index("### Run one fault at a time")
+    why = overlaid.index("**Why the failures are forced.**")
+    assert section < why < overlaid.index("For each row: click")
+    assert overlaid.count("### Run one fault at a time") == 1
