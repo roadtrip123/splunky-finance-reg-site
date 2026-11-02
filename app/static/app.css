@@ -442,6 +442,9 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
                font-size: 12px; color: var(--light-grey); }
 .details .button { margin-top: 6px; }
 .snippet-help { color: var(--muted); font-size: 14px; margin: 12px 0 10px; }
+.live-snippet { margin: 12px 0 18px; }
+.snippet-locked { border: var(--line) dashed var(--rule); border-radius: 12px; padding: 18px 20px; }
+.snippet-locked p { margin: 0 0 12px; }
 .snippet-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .copy.wide-copy { margin-left: 0; padding: 7px 16px; font-size: 10.5px; color: var(--cisco-blue);
                   border-color: var(--cisco-blue); }

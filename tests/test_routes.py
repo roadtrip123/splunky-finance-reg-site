@@ -302,3 +302,9 @@ def test_the_alias_reads_like_a_name():
     from app.routes.api import model_alias
     assert model_alias("my-gateway-model") == "My Gateway Model"
     assert model_alias("gpt_4o-mini") == "Gpt 4o Mini"
+
+
+def test_the_lab_page_carries_the_live_snippet_slot_and_no_key(registered):
+    page = registered.get("/lab").text
+    assert "data-integration-snippet" in page
+    assert "test-llm-key" not in page and "YOUR_TOKEN" not in page

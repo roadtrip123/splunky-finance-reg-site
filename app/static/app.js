@@ -103,6 +103,23 @@
     slots.forEach(function (slot) {
       slot.innerHTML = render(data, { openSnippet: slot.hasAttribute("data-open-snippet") });
     });
+    paintSnippets(data);
+  }
+
+  /* The integration body in the Step 4 guide: the participant's own, the same as on My lab. */
+  var snippets = document.querySelectorAll("[data-integration-snippet]");
+  function paintSnippets(data) {
+    snippets.forEach(function (slot) {
+      if (!data || !data.llm || !data.llm.integration_json) {
+        slot.innerHTML = '<div class="snippet-locked"><p>Check in and this fills in with your ' +
+          "gateway, model and key, ready to paste.</p>" +
+          '<a class="button" href="/#check-in">Check in</a></div>';
+        return;
+      }
+      slot.innerHTML = '<div class="snippet-bar"><button class="copy wide-copy" data-copy="' +
+        escape(data.llm.integration_json) + '">Copy JSON</button></div>' +
+        "<pre>" + escape(data.llm.integration_json) + "</pre>";
+    });
   }
 
   function wire() {
@@ -131,7 +148,7 @@
   function load() {
     fetch("/api/credentials", { credentials: "same-origin" })
       .then(function (response) {
-        if (response.status === 401) { paint(prompt()); return null; }
+        if (response.status === 401) { paint(prompt()); paintSnippets(null); return null; }
         if (!response.ok) throw new Error("HTTP " + response.status);
         return response.json();
       })

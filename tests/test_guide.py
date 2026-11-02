@@ -134,3 +134,14 @@ def test_the_built_guide_in_this_checkout_has_no_credentials_in_it():
         assert secret not in text
     for key, value in local_values().items():
         assert value not in text, key
+
+
+def test_the_placeholder_snippet_becomes_the_participants_own(upstream):
+    """Step 4 shows the same filled-in block as My lab, never ENDPOINT_URL and YOUR_TOKEN."""
+    assert "YOUR_TOKEN" in upstream
+    overlaid = overlay.apply(upstream)
+    for placeholder in ("ENDPOINT_URL", "YOUR_TOKEN", "LLM_MODEL_NAME"):
+        assert placeholder not in overlaid
+    assert "data-integration-snippet" in overlaid
+    html, _ = build_guide.add_heading_ids(build_guide.render(overlaid))
+    assert '<div class="live-snippet" data-integration-snippet></div>' in html

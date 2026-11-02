@@ -34,12 +34,25 @@ AGENT_NOTE = f"""
 """
 
 INTEGRATION = f"""
-**For this workshop:** **{CARD}** (the button at the bottom right) has the endpoint, the model and
-the key, and a *Galileo custom integration, filled in* block you can copy straight into the field
-above. Its `alias` is the name Galileo's model picker shows when you build the evaluators.
+**For this workshop:** the block above is already filled in with your gateway, model and key once
+you have checked in: copy it straight into the field. The same block is on **My lab** and in
+**{CARD}** (the button at the bottom right). Its `alias` is the name Galileo's model picker shows
+when you build the evaluators.
 
 If saving or testing the integration comes back with a 404, the endpoint field wants the full path
 rather than the base, so add `/chat/completions` to the Base URL.
+"""
+
+# Upstream's integration body with ENDPOINT_URL, LLM_MODEL and YOUR_TOKEN placeholders. On the
+# site it becomes the participant's own, filled in behind their cookie, the same block My lab
+# shows, so the guide and My lab never disagree and the key is never in page source.
+SNIPPET_WAS = ' Code Snippet:\n ```\n{\n  "authentication_type": "api_key",\n  "endpoint": "ENDPOINT_URL",\n  "default_model": "LLM_MODEL",\n  "model_properties": [\n    {\n      "name": "LLM_MODEL",\n      "alias": "LLM_MODEL_NAME",\n      "based_on": null,\n      "supported_parameters": [\n        "max_tokens",\n        "stop_sequences",\n        "temperature",\n        "tool_choice",\n        "tools"\n      ],\n      "supports_json_schema": false\n    }\n  ],\n  "token": null,\n  "api_key_header": "Authorization",\n  "api_key_value": "Bearer YOUR_TOKEN",\n  "authentication_scope": null,\n  "oauth2_token_url": null,\n  "headers": null,\n  "custom_llm_config": null,\n  "custom_header_mapping": null,\n  "multi_modal_config": null\n}\n ```\n'
+
+SNIPPET_NOW = """
+**Your integration, filled in:**
+
+<div class="live-snippet" data-integration-snippet></div>
+
 """
 
 JUDGE_WAS = """**Use `gpt-4.1-mini` as the judge model.** Every accuracy figure in this lab was measured on it. A
@@ -83,6 +96,7 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
         "with no score, or with reasoning that will not parse, that is the first field to try as `true`.\n"
         + INTEGRATION,
     ),
+    (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
     (
