@@ -36,7 +36,7 @@ AGENT_NOTE = f"""
 INTEGRATION = f"""
 **For this workshop:** **{CARD}** (the button at the bottom right) has the endpoint, the model and
 the key, and a *Galileo custom integration, filled in* block you can copy straight into the field
-above. Use the model as both `name` and `alias`.
+above. Its `alias` is the name Galileo's model picker shows when you build the evaluators.
 
 If saving or testing the integration comes back with a 404, the endpoint field wants the full path
 rather than the base, so add `/chat/completions` to the Base URL.

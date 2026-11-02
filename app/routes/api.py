@@ -13,6 +13,12 @@ from .public import current_participant
 router = APIRouter(prefix="/api")
 
 
+def model_alias(model):
+    """What Galileo's model picker shows for the model: my-gateway-model reads as My Gateway
+    Model."""
+    return " ".join(word.capitalize() for word in model.replace("_", "-").split("-") if word)
+
+
 def integration_snippet(base_url, model, key):
     """The Galileo custom-LLM integration body, filled in. Built here rather than in the guide so
     the key reaches the browser only after the cookie has been checked."""
@@ -22,7 +28,7 @@ def integration_snippet(base_url, model, key):
         "default_model": model,
         "model_properties": [{
             "name": model,
-            "alias": model,
+            "alias": model_alias(model),
             "based_on": None,
             "supported_parameters": ["max_tokens", "stop_sequences", "temperature",
                                      "tool_choice", "tools"],

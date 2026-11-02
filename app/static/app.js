@@ -27,7 +27,8 @@
       buttons + "</span></div>";
   }
 
-  function render(data) {
+  function render(data, opts) {
+    opts = opts || {};
     var parts = ['<section class="card details"><p class="eyebrow cyan">' +
       '<span class="live-dot"></span>Checked in</p><h2>Your lab details</h2>'];
 
@@ -72,10 +73,13 @@
     parts.push(row("Model", data.llm.model));
     parts.push(row("API key", data.llm.api_key, { secret: true }));
     if (data.llm.integration_json) {
-      parts.push('<details><summary>Galileo custom integration, filled in</summary><pre>' +
-        escape(data.llm.integration_json) + "</pre>" +
-        '<button class="copy" data-copy="' + escape(data.llm.integration_json) +
-        '">copy the JSON</button></details>');
+      parts.push('<details class="snippet"' + (opts.openSnippet ? " open" : "") + ">" +
+        "<summary>Galileo custom integration, filled in</summary>" +
+        '<p class="snippet-help">Step 4: paste this into the custom integration in Galileo. It ' +
+        "already has your gateway, model and key.</p>" +
+        '<div class="snippet-bar"><button class="copy wide-copy" data-copy="' +
+        escape(data.llm.integration_json) + '">Copy JSON</button></div>' +
+        "<pre>" + escape(data.llm.integration_json) + "</pre></details>");
     }
 
     parts.push("</section>");
@@ -92,6 +96,13 @@
 
   function paint(html) {
     slots.forEach(function (slot) { slot.innerHTML = html; });
+  }
+
+  /* My lab shows the integration JSON open; the drawer and the briefing keep it folded. */
+  function paintDetails(data) {
+    slots.forEach(function (slot) {
+      slot.innerHTML = render(data, { openSnippet: slot.hasAttribute("data-open-snippet") });
+    });
   }
 
   function wire() {
@@ -126,7 +137,7 @@
       })
       .then(function (data) {
         if (!data) return;
-        paint(render(data));
+        paintDetails(data);
         /* Keep polling only while something is still being provisioned. */
         if (!data.galileo.ready || !data.instance.url) setTimeout(load, POLL_MS);
       })

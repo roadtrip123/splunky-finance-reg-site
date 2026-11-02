@@ -281,3 +281,24 @@ def test_someone_with_their_own_account_is_not_shown_the_shared_password(registe
     galileo = registered.get("/api/credentials").json()["galileo"]
     assert galileo["ready"] and galileo["existing"]
     assert galileo["email"] == "ada@example.com" and galileo["password"] == ""
+
+
+def test_the_integration_snippet_is_ready_to_paste(registered):
+    """Real gateway, model and key, and a readable alias for Galileo's model picker."""
+    import json
+    snippet = json.loads(registered.get("/api/credentials").json()["llm"]["integration_json"])
+    assert snippet["endpoint"] == "https://llm.example/v1"
+    assert snippet["default_model"] == "test-model"
+    model = snippet["model_properties"][0]
+    assert model["name"] == "test-model" and model["alias"] == "Test Model"
+    assert snippet["api_key_value"] == "Bearer test-llm-key"
+
+
+def test_my_lab_opens_the_snippet(registered):
+    assert "data-open-snippet" in registered.get("/my-lab").text
+
+
+def test_the_alias_reads_like_a_name():
+    from app.routes.api import model_alias
+    assert model_alias("my-gateway-model") == "My Gateway Model"
+    assert model_alias("gpt_4o-mini") == "Gpt 4o Mini"
