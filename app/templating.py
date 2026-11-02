@@ -1,4 +1,5 @@
 """One Jinja environment, so every router shares the same filters and header context."""
+import hashlib
 import time
 
 from fastapi.templating import Jinja2Templates
@@ -30,6 +31,25 @@ def ago(value):
     return f"{seconds // 3600} h ago"
 
 
+STATIC = ROOT / "app" / "static"
+_versions = {}
+
+
+def asset(path):
+    """/static/<path>?v=<content hash>. The static files are served without caching instructions,
+    so a browser keeps an old stylesheet for as long as it likes after an update: the page arrives
+    new and the styling arrives old. A URL that changes with the file makes it fetch the new one."""
+    file = STATIC / path
+    try:
+        stamp = file.stat().st_mtime_ns
+    except OSError:
+        return f"/static/{path}"
+    key = (path, stamp)
+    if key not in _versions:
+        _versions[key] = hashlib.sha256(file.read_bytes()).hexdigest()[:12]
+    return f"/static/{path}?v={_versions[key]}"
+
+
 def brand_logo():
     """An official logo dropped into app/static/brand/ replaces the text wordmark, checked per
     render so it shows up without a restart."""
@@ -41,3 +61,4 @@ templates.env.filters["clean_url"] = clean_url
 templates.env.filters["ago"] = ago
 templates.env.globals["nav"] = pages.NAV
 templates.env.globals["brand_logo"] = brand_logo
+templates.env.globals["asset"] = asset

@@ -325,3 +325,18 @@ def test_the_overview_embeds_the_video_above_check_in(client):
     assert video < page.index('id="check-in"')
     assert 'loading="lazy"' in page and "allowfullscreen" in page
     assert "youtube-nocookie" not in client.get("/register").text
+
+
+def test_the_stylesheet_and_script_urls_change_with_their_content(client, tmp_path, monkeypatch):
+    """After an update a browser must fetch the new stylesheet, not reuse the old one."""
+    import re
+
+    from app import templating
+    page = client.get("/").text
+    css = re.search(r'href="/static/app\.css\?v=([0-9a-f]{12})"', page)
+    js = re.search(r'src="/static/app\.js\?v=([0-9a-f]{12})"', page)
+    assert css and js
+    (tmp_path / "app.css").write_text("body { color: red; }")
+    monkeypatch.setattr(templating, "STATIC", tmp_path)
+    assert templating.asset("app.css") != f"/static/app.css?v={css.group(1)}"
+    assert client.get(f"/static/app.css?v={css.group(1)}").status_code == 200
