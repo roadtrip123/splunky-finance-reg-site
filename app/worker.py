@@ -12,7 +12,7 @@ Three states matter to a participant standing in the room:
 import threading
 import time
 
-from . import galileo, store
+from . import galileo, runtime, store
 from .config import settings
 
 POOL_AFTER = 120  # disarmed: seconds before a pre-made account beats an explanation
@@ -107,7 +107,8 @@ class Creator:
         row = store.next_queued()
         if not row:
             return None
-        store.set_galileo(row["id"], "ready", email=row["email"])
+        store.set_galileo(row["id"], "ready", email=row["email"],
+                          password=runtime.get("galileo_password"))
         self.last_created_at = time.time()
         return row["email"]
 
@@ -125,9 +126,10 @@ class Creator:
         first, _, last = (row["name"] or "").partition(" ")
         with self._lock:
             token = self._token
+        password = runtime.get("galileo_password")
         try:
             galileo.create_user(
-                settings.galileo_api_url, token, row["email"], settings.galileo_password,
+                settings.galileo_api_url, token, row["email"], password,
                 role=settings.galileo_role, first_name=first.strip() or "Workshop",
                 last_name=last.strip() or "Participant")
         except galileo.GalileoError as error:
@@ -138,7 +140,7 @@ class Creator:
             else:
                 store.requeue(row["id"], str(error))
             return None
-        store.set_galileo(row["id"], "ready", email=row["email"])
+        store.set_galileo(row["id"], "ready", email=row["email"], password=password)
         self.last_created_at = time.time()
         self.created_here += 1
         return row["email"]

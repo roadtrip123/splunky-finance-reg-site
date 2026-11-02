@@ -50,22 +50,15 @@ class Settings:
         self.event_date = os.environ.get("EVENT_DATE", "")
         self.event_place = os.environ.get("EVENT_PLACE", "")
         self.dry_run = os.environ.get("DRY_RUN", "0") not in ("0", "", "false", "no")
+        # Seconds between looks at each participant's instance for the progress board; 0 turns
+        # the tracker off.
+        self.probe_interval = _int("PROBE_INTERVAL", 30)
+        self.stuck_minutes = _int("STUCK_MINUTES", 10)
         self.port = _int("PORT", 8099)
         self.db_path = Path(os.environ.get("LAB_DB") or DATA / "lab.db")
         # A generated secret logs everyone out on restart, which is survivable: the cookie only
         # carries a participant token that the database can hand back from their email.
         self.session_secret = os.environ.get("SESSION_SECRET") or secrets.token_urlsafe(32)
-
-    def missing(self):
-        """Settings that must be filled in before a real event, named for the admin page."""
-        wanted = {
-            "LAB_PASSPHRASE": self.passphrase,
-            "ADMIN_PASSWORD": self.admin_password,
-            "LLM_API_KEY": self.llm_api_key,
-            "GALILEO_API_URL": self.galileo_api_url,
-            "GALILEO_USER_PASSWORD": self.galileo_password,
-        }
-        return [name for name, value in wanted.items() if not value]
 
 
 settings = Settings()

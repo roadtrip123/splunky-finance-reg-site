@@ -39,12 +39,40 @@ seconds, so the instance URL appears at once and the account arrives while they 
 | Arm account creation | paste a Galileo admin API key; it is exchanged for a token held in memory |
 | Watch the roster | who has what, which accounts are created, which fell back, which failed |
 | Release or retry | free an instance for somebody else, or try a failed account again |
+| Progress | a row per person, steps 1 to 8: seen on their instance, ticked by them, or under way, with who has been stuck over ten minutes |
+| Settings | the passphrase, the model gateway (checked on save), the Galileo account password and the admin password |
 | Export | the whole roster as CSV |
 
 **Arming is deliberately not persistent.** The admin token lives in one object in memory, is
 cleared on disarm, and is lost on restart, so an AMI made from this box carries no Galileo
 credential. It has to be armed again after a reboot. While it is disarmed, anyone who registers
 waits two minutes and is then handed a fallback account.
+
+## Progress tracking
+
+Every 30 seconds the site looks at each assigned instance through two endpoints Splunky Finance
+already has: the public `/ready`, and the presenter status behind the password every instance
+shares. Nothing on the instance changes. A presenter login gets its own session, so the
+participant's `/demo-admin` tab stays signed in, and the status read has no side effects.
+
+| Step | How it is known |
+| --- | --- |
+| 1 | the instance found the Galileo project; also ticked by the participant |
+| 2 | Galileo connected with a log stream |
+| 3 | the model answered and a trace was exported |
+| 4, 5, 6 | ticked by the participant: they happen in the Galileo console or in their own runs, which the instance shows nobody else |
+| 7, 8 | the guardrail decided on a tool call; registered with Agent Control but not deciding shows as under way |
+
+`PROBE_INTERVAL` sets the seconds between looks (0 turns it off) and `STUCK_MINUTES` when a row
+turns amber.
+
+## Settings on the admin page
+
+The passphrase, gateway URL, model, gateway key, Galileo account password and admin password can
+all be changed in `/admin`. They are saved in the site's database, never in git or `.env`, and win
+over the installer's values. Changing the Galileo password affects accounts created afterwards
+only: each participant is shown the password their own account was made with. Reinstalling
+without `--keep-data` brings the installer's values back.
 
 ## Install
 
@@ -108,7 +136,7 @@ depends on it is a build that fails on the day.
 app/        FastAPI app: routes, store (SQLite), galileo client, worker, templates, static
 guide/      build_guide.py and overlay.py
 scripts/    install.sh, uninstall.sh, lab-portal.service
-tests/      72 tests, no network
+tests/      126 tests, no network
 data/       lab.db, gitignored
 ```
 

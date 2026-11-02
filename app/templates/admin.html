@@ -46,6 +46,8 @@
     <div class="tile"><b>{{ counts.pool_free }}/{{ counts.pool_total }}</b><span>fallback left</span></div>
   </div>
 
+  {% include "_progress.html" %}
+
   <section class="card">
     <h2>Workshop passphrase</h2>
     <p class="muted small">What you announce in the room. Nobody can check in, and no Galileo
@@ -58,6 +60,43 @@
              required data-reveal-input placeholder="at least {{ min_passphrase }} characters">
       <button type="button" class="ghost" data-reveal-toggle>Show</button>
       <button type="submit">Save</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Settings</h2>
+    <p class="muted small">Saved here, in the site's own database, never in GitHub or the installer's
+       .env. A value saved here wins over the installer's.</p>
+
+    <h3 class="settings-h">Model gateway
+      <span class="pill">{{ 'set here ' ~ (cfg.sources.llm_base_url[1]|clock) if cfg.sources.llm_base_url[0] == 'admin' else 'from install' }}</span></h3>
+    <form method="post" action="/admin/settings/gateway" class="form settings-form" autocomplete="off">
+      <label>Base URL, ending in /v1
+        <input name="base_url" value="{{ cfg.llm_base_url }}" required></label>
+      <label>Model name
+        <input name="model" value="{{ cfg.llm_model }}" required></label>
+      <label>API key
+        <input name="api_key" type="password" placeholder="{% if cfg.llm_key_set %}set{% if cfg.llm_key_tail %}, ends {{ cfg.llm_key_tail }}{% endif %}, {{ cfg.llm_key_length }} characters: leave blank to keep{% else %}not set{% endif %}">
+        <small>Saving checks the gateway: that it answers, takes the key and serves the model.</small></label>
+      <button type="submit">Save and check</button>
+    </form>
+
+    <h3 class="settings-h">Galileo account password
+      <span class="pill">{{ 'set here ' ~ (cfg.sources.galileo_password[1]|clock) if cfg.sources.galileo_password[0] == 'admin' else 'from install' }}</span></h3>
+    <p class="muted small">Given to accounts created from now on. Accounts that already exist, and the
+       fallback accounts, keep the password they were made with.</p>
+    <form method="post" action="/admin/settings/galileo-password" class="row-form" autocomplete="off">
+      <input name="password" type="password" value="{{ cfg.galileo_password }}" minlength="8" required data-reveal-input>
+      <button type="button" class="ghost" data-reveal-toggle>Show</button>
+      <button type="submit">Save</button>
+    </form>
+
+    <h3 class="settings-h">Admin password</h3>
+    <form method="post" action="/admin/settings/admin-password" class="form settings-form" autocomplete="off">
+      <label>Current password <input name="current" type="password" required></label>
+      <label>New password <input name="new" type="password" minlength="{{ cfg.min_admin_password }}" required></label>
+      <label>New password again <input name="confirm" type="password" minlength="{{ cfg.min_admin_password }}" required></label>
+      <button type="submit">Change admin password</button>
     </form>
   </section>
 

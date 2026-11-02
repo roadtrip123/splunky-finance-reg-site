@@ -2,11 +2,12 @@
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
-from .. import galileo, store
+from .. import galileo, gateway, runtime, store
 from ..config import settings
 from ..security import (
     ADMIN_COOKIE,
     COOKIE_MAX_AGE,
+    MIN_ADMIN_PASSWORD,
     MIN_PASSPHRASE,
     admin_password_ok,
     client_ip,
@@ -16,6 +17,7 @@ from ..security import (
     unsign,
 )
 from ..templating import templates
+from ..tracker import SELF_STEPS, tracker
 from ..worker import creator
 
 router = APIRouter(prefix="/admin")
@@ -26,15 +28,52 @@ def signed_in(request):
     return unsign(request.cookies.get(ADMIN_COOKIE, "")) == "admin"
 
 
+def progress_context():
+    rows = store.progress_board(stuck_after=settings.stuck_minutes * 60)
+    on_step = {}
+    for row in rows:
+        key = row["current"] or "done"
+        on_step[key] = on_step.get(key, 0) + 1
+    return {
+        "board": rows,
+        "on_step": sorted(on_step.items(), key=lambda kv: (kv[0] == "done", kv[0])),
+        "stuck": sum(1 for r in rows if r["stuck"]),
+        "self_steps": SELF_STEPS,
+        "probe_interval": settings.probe_interval,
+        "last_sweep": tracker.last_sweep,
+        "stuck_minutes": settings.stuck_minutes,
+    }
+
+
+@router.get("/progress", response_class=HTMLResponse)
+def progress(request: Request):
+    """The progress board alone, which the admin page fetches to refresh itself."""
+    if not signed_in(request):
+        return HTMLResponse("", status_code=401)
+    return templates.TemplateResponse(request, "_progress.html", progress_context())
+
+
 def dashboard(request, message="", error=""):
     passphrase, source, changed_at = current_passphrase()
-    missing = [name for name in settings.missing()
-               if not (name == "LAB_PASSPHRASE" and passphrase)]
+    missing = runtime.missing()
+    key = runtime.get("llm_api_key")
+    settings_view = {
+        "llm_base_url": runtime.get("llm_base_url"),
+        "llm_model": runtime.get("llm_model"),
+        "llm_key_set": bool(key),
+        "llm_key_tail": key[-4:] if len(key) >= 8 else "",
+        "llm_key_length": len(key),
+        "galileo_password": runtime.get("galileo_password"),
+        "sources": {name: runtime.source(name) for name in runtime.EDITABLE},
+        "min_admin_password": MIN_ADMIN_PASSWORD,
+    }
     return templates.TemplateResponse(request, "admin.html", {
         "passphrase": passphrase,
         "passphrase_source": source,
         "passphrase_changed_at": changed_at,
         "min_passphrase": MIN_PASSPHRASE,
+        **progress_context(),
+        "cfg": settings_view,
         "counts": store.counts(),
         "roster": store.roster(),
         "boxes": store.boxes(),
@@ -67,7 +106,7 @@ def login(request: Request, password: str = Form("")):
     if not passphrase_attempts.allow(ip):
         return login_page(request, "Too many attempts. Wait a minute.", 429)
     if not admin_password_ok(password):
-        if not settings.admin_password:
+        if not runtime.get("admin_password"):
             return login_page(request, "No admin password is configured on this box.", 503)
         return login_page(request, "Wrong password.", 403)
     response = RedirectResponse("/admin", status_code=303)
@@ -152,6 +191,62 @@ def set_passphrase(request: Request, passphrase: str = Form("")):
     store.set_config("passphrase", value)
     return dashboard(request, message="Passphrase changed. The old one stops working now; anyone "
                                       "already checked in keeps their lab.")
+
+
+@router.post("/settings/gateway", response_class=HTMLResponse)
+def set_gateway(request: Request, base_url: str = Form(""), model: str = Form(""),
+                api_key: str = Form("")):
+    """Save the model gateway, then check it the way it was checked by hand during setup. A blank
+    key keeps the current one, so the field never has to show it."""
+    denied = guard(request)
+    if denied:
+        return denied
+    url = store.clean_url(base_url).rstrip("/")
+    if not url:
+        return dashboard(request, error="The gateway URL must be a full https:// address.")
+    if not model.strip():
+        return dashboard(request, error="Give the model name the gateway expects.")
+    for name, value in (("llm_base_url", url), ("llm_model", model.strip()),
+                        ("llm_api_key", api_key.strip())):
+        if value and value != runtime.get(name):
+            runtime.put(name, value)
+    ok, result = gateway.check(runtime.get("llm_base_url"), runtime.get("llm_api_key"),
+                               runtime.get("llm_model"))
+    saved = "Model gateway saved. Participants see it the next time their details load."
+    if ok:
+        return dashboard(request, message=f"{saved} Check: {result}.")
+    return dashboard(request, error=f"{saved} But the check failed: {result}.")
+
+
+@router.post("/settings/galileo-password", response_class=HTMLResponse)
+def set_galileo_password(request: Request, password: str = Form("")):
+    denied = guard(request)
+    if denied:
+        return denied
+    value = password.strip()
+    if len(value) < 8:
+        return dashboard(request, error="The Galileo account password needs at least 8 characters.")
+    runtime.put("galileo_password", value)
+    return dashboard(request, message="Galileo account password changed for accounts created from "
+                                      "now on. Anyone who already has an account keeps theirs, "
+                                      "and is still shown the one it was made with.")
+
+
+@router.post("/settings/admin-password", response_class=HTMLResponse)
+def set_admin_password(request: Request, current: str = Form(""), new: str = Form(""),
+                       confirm: str = Form("")):
+    denied = guard(request)
+    if denied:
+        return denied
+    if not admin_password_ok(current):
+        return dashboard(request, error="The current admin password is not right.")
+    if len(new.strip()) < MIN_ADMIN_PASSWORD:
+        return dashboard(request, error=f"The new admin password needs at least "
+                                        f"{MIN_ADMIN_PASSWORD} characters.")
+    if new.strip() != confirm.strip():
+        return dashboard(request, error="The two new passwords do not match.")
+    runtime.put("admin_password", new.strip())
+    return dashboard(request, message="Admin password changed. Use the new one next time you sign in.")
 
 
 @router.post("/arm", response_class=HTMLResponse)

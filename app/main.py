@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from . import store
 from .config import ROOT, settings
 from .routes import admin, api, public
+from .tracker import tracker
 from .worker import creator
 
 
@@ -15,9 +16,11 @@ from .worker import creator
 async def lifespan(app):
     store.init_db()
     creator.start()
+    tracker.start()
     try:
         yield
     finally:
+        tracker.stop()
         creator.stop()
 
 

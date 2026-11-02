@@ -17,6 +17,7 @@ from ..security import (
     unsign,
 )
 from ..templating import templates
+from ..tracker import SELF_STEPS
 
 router = APIRouter()
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -58,8 +59,12 @@ def guide_page(request, key):
         if target:
             neighbour[side] = {"path": pages.GUIDE_PAGES[target]["path"],
                                "name": pages.PAGE_NAMES[target]}
+    participant = current_participant(request)
+    ticked = ({s["step"] for s in store.steps_for(participant["id"], "self")}
+              if participant else set())
     return page(request, "guide_page.html", here=key, meta=meta, sections=sections,
-                intro=content.intro() if key == "briefing" else "", neighbour=neighbour)
+                intro=content.intro() if key == "briefing" else "", neighbour=neighbour,
+                participant=participant, self_steps=SELF_STEPS, ticked=ticked)
 
 
 @router.get("/briefing", response_class=HTMLResponse)

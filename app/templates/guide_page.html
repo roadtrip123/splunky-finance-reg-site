@@ -25,7 +25,15 @@
   <article class="guide">
     {% if here == 'briefing' %}<div class="inline-details" data-lab-details></div>{% endif %}
     {% for section in sections %}
-      <section class="guide-section">{{ section.html|safe }}</section>
+      <section class="guide-section">{{ section.html|safe }}
+        {% if participant and section.step in self_steps %}
+          {% set done = section.step in ticked %}
+          <div class="step-done{{ ' is-done' if done }}" data-step="{{ section.step }}">
+            <button type="button" data-step-toggle>{% if done %}&#10003; Step {{ section.step }} done{% else %}Mark step {{ section.step }} done{% endif %}</button>
+            <span class="step-done-note">{% if done %}<button type="button" class="link" data-step-toggle>undo</button>{% else %}So your instructor can see where you are.{% endif %}</span>
+          </div>
+        {% endif %}
+      </section>
     {% endfor %}
     <nav class="pager" aria-label="Pages">
       {% if neighbour.prev %}

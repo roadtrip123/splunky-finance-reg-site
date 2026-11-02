@@ -55,6 +55,20 @@ CREATE TABLE IF NOT EXISTS config (
   value TEXT NOT NULL,
   updated_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS progress (
+  participant_id INTEGER NOT NULL,
+  step INTEGER NOT NULL,
+  source TEXT NOT NULL,                         -- auto | self
+  at REAL NOT NULL,
+  PRIMARY KEY (participant_id, step, source)
+);
+CREATE TABLE IF NOT EXISTS probes (
+  box_id INTEGER PRIMARY KEY,
+  checked_at REAL NOT NULL,
+  reachable INTEGER NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  partial TEXT NOT NULL DEFAULT ''              -- steps under way, comma separated
+);
 CREATE INDEX IF NOT EXISTS boxes_state ON boxes(state);
 CREATE INDEX IF NOT EXISTS participants_state ON participants(galileo_state);
 """
@@ -94,7 +108,8 @@ def writing():
 
 # Columns added after the first version shipped. CREATE TABLE IF NOT EXISTS leaves an existing
 # table alone, so an upgrade mid-event would otherwise run against a table missing a column.
-ADDED_COLUMNS = {"participants": {"state": "TEXT NOT NULL DEFAULT 'active'"}}
+ADDED_COLUMNS = {"participants": {"state": "TEXT NOT NULL DEFAULT 'active'",
+                                   "galileo_password": "TEXT NOT NULL DEFAULT ''"}}
 
 
 def init_db():
@@ -386,11 +401,16 @@ def created_count():
         db.close()
 
 
-def set_galileo(participant_id, state, email="", error=""):
+def set_galileo(participant_id, state, email="", error="", password=None):
+    """password is the one the account was created with, kept per participant so that changing
+    the default on the admin page never shows someone a password their account does not have."""
     with writing() as db:
         db.execute(
             "UPDATE participants SET galileo_state=?, galileo_email=?, galileo_error=? WHERE id=?",
             (state, email, error[:500], participant_id))
+        if password is not None:
+            db.execute("UPDATE participants SET galileo_password=? WHERE id=?",
+                       (password, participant_id))
         log(db, f"galileo-{state}", f"participant={participant_id} {error[:200]}")
 
 
@@ -409,11 +429,124 @@ def issue_pool_account(participant_id):
             return None
         db.execute("UPDATE pool SET state='issued', participant_id=? WHERE id=?",
                    (participant_id, row["id"]))
+        # Fallback accounts were made ahead of time with the installer's password, whatever the
+        # admin page has set since.
         db.execute(
-            "UPDATE participants SET galileo_state='pool', galileo_email=?, galileo_error='' "
-            "WHERE id=?", (row["email"], participant_id))
+            "UPDATE participants SET galileo_state='pool', galileo_email=?, galileo_error='',"
+            " galileo_password=? WHERE id=?",
+            (row["email"], settings.galileo_password, participant_id))
         log(db, "galileo-pool", f"participant={participant_id} {row['email']}")
         return row["email"]
+
+
+# ---------------------------------------------------------------- progress
+
+STEPS = range(1, 9)
+
+
+def mark_step(participant_id, step, source):
+    """Record the first time a step was seen done. Later sightings change nothing, so the time is
+    when they got there, which is what working out who is stuck needs."""
+    with writing() as db:
+        db.execute("INSERT OR IGNORE INTO progress (participant_id, step, source, at)"
+                   " VALUES (?,?,?,?)", (participant_id, step, source, time.time()))
+
+
+def unmark_step(participant_id, step, source="self"):
+    with writing() as db:
+        db.execute("DELETE FROM progress WHERE participant_id=? AND step=? AND source=?",
+                   (participant_id, step, source))
+
+
+def steps_for(participant_id, source=None):
+    db = connect()
+    try:
+        sql = "SELECT step, source, at FROM progress WHERE participant_id=?"
+        args = [participant_id]
+        if source:
+            sql += " AND source=?"
+            args.append(source)
+        return [dict(r) for r in db.execute(sql, args)]
+    finally:
+        db.close()
+
+
+def record_probe(box_id, reachable, note="", partial=()):
+    with writing() as db:
+        db.execute("INSERT INTO probes (box_id, checked_at, reachable, note, partial)"
+                   " VALUES (?,?,?,?,?) ON CONFLICT(box_id) DO UPDATE SET"
+                   " checked_at=excluded.checked_at, reachable=excluded.reachable,"
+                   " note=excluded.note, partial=excluded.partial",
+                   (box_id, time.time(), 1 if reachable else 0, note[:200],
+                    ",".join(str(s) for s in sorted(partial))))
+
+
+def assigned_boxes():
+    """Instances someone is using, with who: what the tracker visits."""
+    db = connect()
+    try:
+        return [dict(r) for r in db.execute(
+            "SELECT b.id, b.url, p.id AS participant_id FROM boxes b"
+            " JOIN participants p ON p.box_id = b.id"
+            " WHERE b.state='assigned' AND p.state='active'").fetchall()]
+    finally:
+        db.close()
+
+
+def progress_board(stuck_after=600, now=None):
+    """One row per active participant: each step done automatically, by their own tick, under way,
+    or not yet; the step they are on and for how long; and what the last look at their instance
+    found. A row is stuck when the step they are on has outlasted stuck_after seconds."""
+    now = now or time.time()
+    db = connect()
+    try:
+        people = [dict(r) for r in db.execute(
+            "SELECT p.id, p.name, p.email, p.created_at, b.url AS box_url, b.id AS box_id,"
+            " pr.checked_at, pr.reachable, pr.note, pr.partial"
+            " FROM participants p LEFT JOIN boxes b ON b.id = p.box_id"
+            " LEFT JOIN probes pr ON pr.box_id = b.id"
+            " WHERE p.state='active' ORDER BY p.created_at").fetchall()]
+        marks = {}
+        for r in db.execute("SELECT participant_id, step, source, at FROM progress"):
+            marks.setdefault(r["participant_id"], {}).setdefault(r["step"], {})[r["source"]] = r["at"]
+    finally:
+        db.close()
+
+    rows = []
+    for person in people:
+        seen = marks.get(person["id"], {})
+        partial = {int(s) for s in (person["partial"] or "").split(",") if s}
+        cells, finished_at = [], {}
+        for step in STEPS:
+            sources = seen.get(step, {})
+            if "auto" in sources:
+                state = "auto"
+            elif "self" in sources:
+                state = "self"
+            elif step in partial:
+                state = "partial"
+            else:
+                state = "none"
+            if sources:
+                finished_at[step] = min(sources.values())
+            cells.append({"step": step, "state": state})
+        current = next((s for s in STEPS if s not in finished_at), None)
+        if current is None:
+            since = None
+        else:
+            earlier = [finished_at[s] for s in finished_at if s < current]
+            since = max(earlier) if earlier else person["created_at"]
+        minutes = int((now - since) // 60) if since else 0
+        rows.append({
+            **person,
+            "box_url": clean_url(person["box_url"]),
+            "cells": cells,
+            "current": current,
+            "minutes": minutes,
+            "stuck": current is not None and since is not None and now - since > stuck_after,
+            "done": len(finished_at),
+        })
+    return rows
 
 
 # ---------------------------------------------------------------- admin views

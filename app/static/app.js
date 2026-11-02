@@ -142,6 +142,44 @@
     toggle.textContent = hidden ? "Hide" : "Show";
   });
 
+  /* "Mark step done" under the steps the tracker cannot see on the participant's instance. */
+  document.addEventListener("click", function (event) {
+    var toggle = event.target.closest("[data-step-toggle]");
+    if (!toggle) return;
+    var box = toggle.closest("[data-step]");
+    var step = parseInt(box.getAttribute("data-step"), 10);
+    var done = !box.classList.contains("is-done");
+    fetch("/api/progress", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: step, done: done })
+    }).then(function (response) {
+      if (!response.ok) return;
+      box.classList.toggle("is-done", done);
+      box.querySelector("button[data-step-toggle]:not(.link)").innerHTML =
+        done ? "&#10003; Step " + step + " done" : "Mark step " + step + " done";
+      box.querySelector(".step-done-note").innerHTML = done
+        ? '<button type="button" class="link" data-step-toggle>undo</button>'
+        : "So your instructor can see where you are.";
+    });
+  });
+
+  /* The admin progress board refreshes itself. */
+  var board = document.querySelector("[data-progress]");
+  if (board) {
+    setInterval(function () {
+      if (document.hidden) return;
+      fetch("/admin/progress", { credentials: "same-origin" })
+        .then(function (response) { return response.ok ? response.text() : null; })
+        .then(function (html) {
+          if (!html) return;
+          var current = document.querySelector("[data-progress]");
+          if (current) current.outerHTML = html;
+        })
+        .catch(function () {});
+    }, 15000);
+  }
+
   /* The lab-details drawer, opened from the dock at the bottom right of every page. */
   var drawer = document.querySelector("[data-drawer]");
   function openDrawer() {

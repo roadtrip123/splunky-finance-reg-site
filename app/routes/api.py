@@ -3,9 +3,11 @@ import json
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-from .. import store
+from .. import runtime, store
 from ..config import settings
+from ..tracker import SELF_STEPS
 from .public import current_participant
 
 router = APIRouter(prefix="/api")
@@ -88,16 +90,37 @@ def credentials(request: Request):
             "queue_ahead": ahead,
             "queue_seconds": ahead * 4,
             "email": participant["galileo_email"] if galileo_ready else "",
-            "password": settings.galileo_password if galileo_ready else "",
+            "password": (participant["galileo_password"] or runtime.get("galileo_password"))
+                        if galileo_ready else "",
             "console_url": settings.galileo_console_url,
             "api_url": settings.galileo_api_url,
             "agent_control_url": settings.galileo_agent_control_url,
         },
         "llm": {
-            "base_url": settings.llm_base_url,
-            "model": settings.llm_model,
-            "api_key": settings.llm_api_key,
+            "base_url": runtime.get("llm_base_url"),
+            "model": runtime.get("llm_model"),
+            "api_key": runtime.get("llm_api_key"),
             "integration_json": integration_snippet(
-                settings.llm_base_url, settings.llm_model, settings.llm_api_key),
+                runtime.get("llm_base_url"), runtime.get("llm_model"), runtime.get("llm_api_key")),
         },
     }
+
+
+class Tick(BaseModel):
+    step: int
+    done: bool = True
+
+
+@router.post("/progress")
+def tick(request: Request, body: Tick):
+    """A participant marking a step the tracker cannot see on their instance."""
+    participant = current_participant(request)
+    if not participant:
+        return JSONResponse({"error": "not registered"}, status_code=401)
+    if body.step not in SELF_STEPS:
+        return JSONResponse({"error": "that step is tracked automatically"}, status_code=400)
+    if body.done:
+        store.mark_step(participant["id"], body.step, "self")
+    else:
+        store.unmark_step(participant["id"], body.step, "self")
+    return {"step": body.step, "done": body.done}

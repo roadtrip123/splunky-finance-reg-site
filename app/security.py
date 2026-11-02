@@ -9,7 +9,7 @@ import hmac
 import time
 from collections import defaultdict, deque
 
-from . import store
+from . import runtime, store
 from .config import settings
 
 PARTICIPANT_COOKIE = "lab_participant"
@@ -53,10 +53,14 @@ def passphrase_ok(given):
     return hmac.compare_digest((given or "").strip().encode(), expected.encode())
 
 
+MIN_ADMIN_PASSWORD = 8
+
+
 def admin_password_ok(given):
-    if not settings.admin_password:
+    expected = runtime.get("admin_password")
+    if not expected:
         return False
-    return hmac.compare_digest((given or "").strip(), settings.admin_password)
+    return hmac.compare_digest((given or "").strip().encode(), expected.encode())
 
 
 class RateLimiter:

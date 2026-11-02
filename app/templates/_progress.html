@@ -1,0 +1,56 @@
+{# The progress board. Rendered into the admin page and fetched again every few seconds. #}
+<section class="card progress-card" data-progress>
+  <div class="progress-head">
+    <h2>Progress</h2>
+    <p class="muted small">
+      {% if probe_interval > 0 %}Instances checked every {{ probe_interval }}s{% if last_sweep %}, last
+      {{ last_sweep|ago }}{% else %}, first check under way{% endif %}.{% else %}Automatic checks are off
+      (PROBE_INTERVAL=0); only ticks show.{% endif %}
+      {% if stuck %}<strong class="amber-text">{{ stuck }} stuck over {{ stuck_minutes }} min.</strong>{% endif %}
+    </p>
+  </div>
+  {% if not board %}
+    <p class="muted">Nobody has checked in yet.</p>
+  {% else %}
+    <div class="on-step">
+      {% for step, count in on_step %}
+        <span class="pill{{ ' live' if step == 'done' }}">{% if step == 'done' %}Finished{% else %}Step {{ step }}{% endif %} &middot; {{ count }}</span>
+      {% endfor %}
+    </div>
+    <table class="grid board">
+      <thead><tr>
+        <th>Who</th>
+        {% for n in range(1, 9) %}<th class="c" title="{{ 'ticked by the participant' if n in self_steps else 'seen on their instance' }}">{{ n }}</th>{% endfor %}
+        <th>On</th><th>Their instance</th>
+      </tr></thead>
+      <tbody>
+      {% for row in board %}
+        <tr class="{{ 'stuck' if row.stuck }}">
+          <td><strong>{{ row.name }}</strong><div class="small muted">{{ row.email }}</div></td>
+          {% for cell in row.cells %}
+            <td class="c"><span class="mark {{ cell.state }}" title="Step {{ cell.step }}: {{ {'auto': 'seen on their instance', 'self': 'ticked by them', 'partial': 'under way', 'none': 'not yet'}[cell.state] }}">{{ {'auto': '&#9679;', 'self': '&#10003;', 'partial': '&#9680;', 'none': '&middot;'}[cell.state]|safe }}</span></td>
+          {% endfor %}
+          <td class="small">{% if row.current %}Step {{ row.current }}<div class="muted">{{ row.minutes }} min</div>{% else %}<span class="ok-text">Finished</span>{% endif %}</td>
+          <td class="small">
+            {% if not row.box_url %}<span class="muted">no instance yet</span>
+            {% elif not row.checked_at %}<span class="muted">not checked yet</span>
+            {% else %}
+              {% if not row.reachable %}<span class="bad-text">{{ row.note }}</span>
+              {% elif row.note %}<span class="amber-text">{{ row.note }}</span>
+              {% else %}<span class="ok-text">ok</span>{% endif %}
+              <div class="muted">{{ row.checked_at|ago }}</div>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="legend small muted">
+      <span class="mark auto">&#9679;</span> seen on their instance
+      <span class="mark self">&#10003;</span> ticked by them (steps {{ self_steps|join(', ') }})
+      <span class="mark partial">&#9680;</span> under way
+      <span class="mark none">&middot;</span> not yet
+      &middot; amber: on one step over {{ stuck_minutes }} min
+    </p>
+  {% endif %}
+</section>
