@@ -169,3 +169,14 @@ def test_a_repeated_sentence_that_changes_count_upstream_fails_the_build(upstrea
     first_only = upstream.replace(overlay.PICK_WAS, "Select the LLM model,", 1)
     with pytest.raises(overlay.MissingAnchor, match="expected 3"):
         overlay.apply(first_only)
+
+
+def test_the_fault_table_is_followed_by_a_worked_example_in_order(upstream):
+    overlaid = overlay.apply(upstream)
+    example = overlaid.index("**A worked example: Incomplete Answer**")
+    assert overlaid.index("| **Wrong Customer** |") < example < overlaid.index("Then set the scenario back")
+    shots = [overlaid.index(f"/static/img/fault-incomplete-{n}") for n in ("1-enable", "2-ask", "3-galileo")]
+    assert example < shots[0] < shots[1] < shots[2]
+    images = Path(__file__).resolve().parent.parent / "app/static/img"
+    for name in ("1-enable", "2-ask", "3-galileo"):
+        assert (images / f"fault-incomplete-{name}.png").exists()

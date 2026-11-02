@@ -82,6 +82,33 @@ INTEGRATION_KIND_WAS = ("2. Select the integration you want to use for your LLM 
 INTEGRATION_KIND_NOW = ("2. Select **Custom**: the judges use the same model gateway as the agent, "
                         f"and it appears in the evaluators as **{MODEL_ALIAS}**")
 
+# A worked example of one row of the fault table, captured by the instructor, because "enable,
+# ask, look" reads clearly and is still done out of order. Inserted after the table.
+FAULT_TABLE_END = "Then set the scenario back to **Normal Answer / Disabled Guardrails** and ask the same questions"
+FAULT_EXAMPLE = """**A worked example: Incomplete Answer**
+
+1. In the presenter portal (`/demo-admin`), under **Choose what to demonstrate**, click **Enable
+   Incomplete Answer**. The banner confirms it applies to your next message.
+
+   <img width="1114" height="482" alt="The presenter portal's Choose what to demonstrate panel, with Enable Incomplete Answer selected" src="/static/img/fault-incomplete-1-enable.png" />
+
+2. In the banking app, open **My Bank Agent** and ask the question from the **Incomplete Answer**
+   row of the table above. The answer leaves out part of what you asked: here it gives the number
+   of restaurant purchases but not what was spent. Use the table's question rather than the one in
+   the picture; it asks for two things, which makes the gap easier for the judge to see.
+
+   <img width="461" height="803" alt="The My Bank Agent chat: a question about restaurant spending, answered with a purchase count and no amount" src="/static/img/fault-incomplete-2-ask.png" />
+
+3. In Galileo, open your project, then your **Agent Stream**. On the newest row,
+   **SplunkyAnswerWholeQuestion** shows **false** while the other two evaluators stay **true**: only
+   the judge built for this fault catches it.
+
+   <img width="1789" height="228" alt="Galileo's tracing view: SplunkyAnswerWholeQuestion false, SplunkyNumericalCorrectness and SplunkyRightCustomer true" src="/static/img/fault-incomplete-3-galileo.png" />
+
+Do the same for the other two rows, one at a time, each with its own question.
+
+"""
+
 JUDGE_WAS = """**Use `gpt-4.1-mini` as the judge model.** Every accuracy figure in this lab was measured on it. A
 reasoning model is not a better judge here: on the same traces, GPT-5.1 caught one incomplete answer
 in three, and `gpt-4.1-mini` caught them. The picker only lists models from the integration you
@@ -129,6 +156,7 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
     (PICKER_WAS, PICKER_NOW, 3),
     (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
+    (FAULT_TABLE_END, FAULT_EXAMPLE + FAULT_TABLE_END),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
     (
         "Your instructor gives you one URL, an account number and two passwords. Everything else "
