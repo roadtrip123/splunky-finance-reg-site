@@ -359,3 +359,16 @@ def test_a_stranger_cannot_move_anyone(client):
                            data={"url": "https://elsewhere.example.show"}, follow_redirects=False)
     assert response.status_code == 303
     assert store.by_email("mo@example.com")["box_url"] == "https://p01.example.show"
+
+
+def test_the_sidebar_numbers_each_step_by_its_own_number(client):
+    """The lab page starts at Step 4; numbering its entries from 01 read as a second step number."""
+    import re
+    lab = client.get("/lab").text
+    toc = lab[lab.index('class="toc"'):lab.index("</aside>")]
+    numbers = re.findall(r'<span class="toc-num">(\d*)</span>', toc)
+    assert numbers == ["04", "05", "06", "07", "08"]
+    assert "Step 4:" not in toc and "Configure Galileo Evaluators" in toc
+    briefing = client.get("/briefing").text
+    toc = briefing[briefing.index('class="toc"'):briefing.index("</aside>")]
+    assert re.findall(r'<span class="toc-num">(\d*)</span>', toc) == ["", "01", "02", "03"]

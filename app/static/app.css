@@ -343,15 +343,13 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
 .toc { position: sticky; top: 100px; align-self: start; }
 .toc-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .28em;
              text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
-.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
-.toc li { counter-increment: toc; }
+.toc ol { list-style: none; margin: 0; padding: 0; }
 .toc a { display: grid; grid-template-columns: 30px 1fr; padding: 8px 12px; color: var(--muted);
          font-size: 14px; line-height: 1.4; border-left: 2px solid var(--hair); }
-.toc a::before { content: counter(toc, decimal-leading-zero); font-family: var(--mono);
-                 font-size: 10.5px; color: var(--rule); padding-top: 2px; }
+.toc-num { font-family: var(--mono); font-size: 10.5px; color: var(--rule); padding-top: 2px; }
 .toc a:hover { color: var(--white); text-decoration: none; border-left-color: var(--rule); }
 .toc a.active { color: var(--white); border-left-color: var(--cisco-blue); }
-.toc a.active::before { color: var(--cisco-blue); }
+.toc a.active .toc-num { color: var(--cisco-blue); }
 
 .guide { min-width: 0; max-width: 860px; }
 .inline-details { margin-bottom: 20px; }

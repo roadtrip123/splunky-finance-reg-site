@@ -18,7 +18,9 @@
     <p class="toc-title">On this page</p>
     <ol>
       {% for section in sections %}
-        <li><a href="#{{ section.id }}">{{ section.title }}</a></li>
+        {# The step's own number, not a count of this page's entries: the lab page starts at
+           Step 4, and "01 Step 4" read as two different numbers. #}
+        <li><a href="#{{ section.id }}"><span class="toc-num">{% if section.step %}{{ '%02d'|format(section.step) }}{% endif %}</span><span>{{ section.short if section.step else section.title }}</span></a></li>
       {% endfor %}
     </ol>
   </aside>
