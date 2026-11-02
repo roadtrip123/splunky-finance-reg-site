@@ -155,3 +155,28 @@ def test_settings_refuse_a_stranger(client):
                                                            "confirm": "y" * 9})):
         assert client.post(path, data=form, follow_redirects=False).status_code == 303
     assert all(runtime.source(n)[0] == "install" for n in runtime.EDITABLE)
+
+
+def test_the_galileo_organisation_can_be_set_and_participants_are_sent_there(client):
+    page = admin(client).post("/admin/settings/galileo-console", data={
+        "console_url": "https://console.multitenant.galileocloud.io/cisco-live-apjc/"}).text
+    assert "Participants are now sent to https://console.multitenant.galileocloud.io/cisco-live-apjc." in page
+    assert runtime.get("galileo_console_url") == "https://console.multitenant.galileocloud.io/cisco-live-apjc"
+    client.cookies.clear()
+    client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada Lovelace", "email": "ada@example.com"})
+    galileo = client.get("/api/credentials").json()["galileo"]
+    assert galileo["console_url"] == "https://console.multitenant.galileocloud.io/cisco-live-apjc"
+
+
+def test_a_console_url_that_is_not_https_is_refused(client):
+    page = admin(client).post("/admin/settings/galileo-console",
+                              data={"console_url": "console.multitenant.galileocloud.io/x"}).text
+    assert "must be a full https:// address" in page
+    assert runtime.source("galileo_console_url")[0] == "install"
+
+
+def test_the_admin_page_shows_where_participants_are_sent(client):
+    page = admin(client).get("/admin").text
+    assert "Galileo organisation" in page
+    assert "Participants are sent to" in page and "https://console.example" in page

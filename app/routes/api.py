@@ -95,7 +95,7 @@ def credentials(request: Request):
             "existing": existing,
             "password": (participant["galileo_password"] or runtime.get("galileo_password"))
                         if galileo_ready and not existing else "",
-            "console_url": settings.galileo_console_url,
+            "console_url": runtime.get("galileo_console_url"),
             "api_url": settings.galileo_api_url,
             "agent_control_url": settings.galileo_agent_control_url,
         },

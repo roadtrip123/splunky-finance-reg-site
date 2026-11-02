@@ -9,7 +9,7 @@ from . import store
 from .config import settings
 
 EDITABLE = ("passphrase", "admin_password", "llm_base_url", "llm_model", "llm_api_key",
-            "galileo_password")
+            "galileo_password", "galileo_console_url")
 
 
 def get(name):

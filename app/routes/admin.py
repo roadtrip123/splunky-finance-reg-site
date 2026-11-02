@@ -64,6 +64,7 @@ def dashboard(request, message="", error=""):
         "llm_key_tail": key[-4:] if len(key) >= 8 else "",
         "llm_key_length": len(key),
         "galileo_password": runtime.get("galileo_password"),
+        "galileo_console_url": runtime.get("galileo_console_url"),
         "sources": {name: runtime.source(name) for name in runtime.EDITABLE},
         "min_admin_password": MIN_ADMIN_PASSWORD,
     }
@@ -216,6 +217,22 @@ def set_gateway(request: Request, base_url: str = Form(""), model: str = Form(""
     if ok:
         return dashboard(request, message=f"{saved} Check: {result}.")
     return dashboard(request, error=f"{saved} But the check failed: {result}.")
+
+
+@router.post("/settings/galileo-console", response_class=HTMLResponse)
+def set_galileo_console(request: Request, console_url: str = Form("")):
+    """The console link participants are given, including the organisation, so someone who
+    belongs to several Galileo organisations lands in the workshop's and builds there."""
+    denied = guard(request)
+    if denied:
+        return denied
+    url = store.clean_url(console_url).rstrip("/")
+    if not url.startswith("https://"):
+        return dashboard(request, error="The console URL must be a full https:// address, such as "
+                                        "https://console.multitenant.galileocloud.io/your-organisation.")
+    runtime.put("galileo_console_url", url)
+    return dashboard(request, message=f"Participants are now sent to {url}. Their lab details "
+                                      "pick it up the next time they load.")
 
 
 @router.post("/settings/galileo-password", response_class=HTMLResponse)

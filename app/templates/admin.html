@@ -82,6 +82,23 @@
       <button type="submit">Save and check</button>
     </form>
 
+    <h3 class="settings-h">Galileo organisation
+      <span class="pill">{{ 'set here ' ~ (cfg.sources.galileo_console_url[1]|clock) if cfg.sources.galileo_console_url[0] == 'admin' else 'from install' }}</span></h3>
+    <p class="muted small">The Console URL participants are given in their lab details. Include the
+       organisation, so anyone who belongs to several lands in this one and builds their project
+       there.</p>
+    <form method="post" action="/admin/settings/galileo-console" class="row-form" autocomplete="off">
+      <input name="console_url" value="{{ cfg.galileo_console_url }}" required
+             placeholder="https://console.multitenant.galileocloud.io/your-organisation">
+      <button type="submit">Save</button>
+    </form>
+    {% if cfg.galileo_console_url %}
+      <p class="small muted">Participants are sent to
+        <a href="{{ cfg.galileo_console_url }}" target="_blank" rel="noopener">{{ cfg.galileo_console_url }}</a>.
+        The organisation the accounts are created in is the one your armed admin key belongs to;
+        make sure they match.</p>
+    {% endif %}
+
     <h3 class="settings-h">Galileo account password
       <span class="pill">{{ 'set here ' ~ (cfg.sources.galileo_password[1]|clock) if cfg.sources.galileo_password[0] == 'admin' else 'from install' }}</span></h3>
     <p class="muted small">Given to accounts created from now on. Accounts that already exist, and the
