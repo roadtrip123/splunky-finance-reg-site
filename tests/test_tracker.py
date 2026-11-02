@@ -10,7 +10,8 @@ from tests.conftest import add_boxes
 FRESH_READY = {"status": "ready", "data": "valid", "model": "unconfigured", "galileo": "unconfigured"}
 
 
-def status(galileo=None, provider="unverified", agent=None, stages=None):
+def status(galileo=None, provider="unconfigured", agent=None, stages=None):
+    # "unconfigured" is what a live instance with no model set reports.
     base = {"state": "unconfigured", "connection": "not_checked", "project_id": None,
             "log_stream_id": None, "export": "not_attempted"}
     return {"galileo": {**base, **(galileo or {})}, "provider_status": {"state": provider},
