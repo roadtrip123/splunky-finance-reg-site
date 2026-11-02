@@ -67,6 +67,21 @@ INTEGRATION_SHOT_NOW = (
     'src="/static/img/galileo-custom-integration.png" />'
 )
 
+# Each evaluator names the judge model precisely. The alias is the site's own, filled in at request
+# time from the gateway settings (see MODEL_ALIAS), so it follows a change made on the admin page and
+# the model's name is not written into this public repository.
+MODEL_ALIAS = '<span class="model-alias" data-model-alias>your custom model</span>'
+PICK_WAS = "Select the **LLM Model** that you configured earlier in this step,"
+PICK_NOW = f"Select **{MODEL_ALIAS}** as the **LLM Model**,"
+PICKER_WAS = ("The model picker lists the `alias` from your integration, for example 'GPT-4.1 mini', "
+              "or whatever you called your custom model, rather than the model name.")
+PICKER_NOW = (f"That is the custom integration you added at the start of this step: the picker lists "
+              f"models by their alias, so look for **{MODEL_ALIAS}**, not the gateway's model name.")
+INTEGRATION_KIND_WAS = ("2. Select the integration you want to use for your LLM judge for example "
+                        "OpenAI or Custom")
+INTEGRATION_KIND_NOW = ("2. Select **Custom**: the judges use the same model gateway as the agent, "
+                        f"and it appears in the evaluators as **{MODEL_ALIAS}**")
+
 JUDGE_WAS = """**Use `gpt-4.1-mini` as the judge model.** Every accuracy figure in this lab was measured on it. A
 reasoning model is not a better judge here: on the same traces, GPT-5.1 caught one incomplete answer
 in three, and `gpt-4.1-mini` caught them. The picker only lists models from the integration you
@@ -108,7 +123,10 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
         "with no score, or with reasoning that will not parse, that is the first field to try as `true`.\n"
         + INTEGRATION,
     ),
+    (INTEGRATION_KIND_WAS, INTEGRATION_KIND_NOW),
     (INTEGRATION_SHOT_WAS, INTEGRATION_SHOT_NOW),
+    (PICK_WAS, PICK_NOW, 3),
+    (PICKER_WAS, PICKER_NOW, 3),
     (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
@@ -126,10 +144,12 @@ class MissingAnchor(Exception):
 
 
 def apply(text):
-    for anchor, replacement in EDITS:
+    for edit in EDITS:
+        anchor, replacement = edit[0], edit[1]
+        expected = edit[2] if len(edit) > 2 else 1
         found = text.count(anchor)
-        if found != 1:
+        if found != expected:
             first = anchor.strip().splitlines()[0][:80]
-            raise MissingAnchor(f"anchor appears {found} times, expected once: {first}")
+            raise MissingAnchor(f"anchor appears {found} times, expected {expected}: {first}")
         text = text.replace(anchor, replacement)
     return text

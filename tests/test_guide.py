@@ -154,3 +154,18 @@ def test_step_four_shows_the_clean_integration_screenshot(upstream):
     assert 'src="/static/img/galileo-custom-integration.png"' in overlaid
     image = Path(__file__).resolve().parent.parent / "app/static/img/galileo-custom-integration.png"
     assert image.exists()
+
+
+def test_every_evaluator_names_the_judge_model(upstream):
+    overlaid = overlay.apply(upstream)
+    assert overlaid.count(overlay.PICK_NOW) == 3
+    assert overlaid.count(overlay.PICKER_NOW) == 3
+    assert "GPT-4.1 mini" not in overlaid
+    assert "Select **Custom**" in overlaid
+
+
+def test_a_repeated_sentence_that_changes_count_upstream_fails_the_build(upstream):
+    """If an evaluator is added or dropped upstream, the build stops instead of half-applying."""
+    first_only = upstream.replace(overlay.PICK_WAS, "Select the LLM model,", 1)
+    with pytest.raises(overlay.MissingAnchor, match="expected 3"):
+        overlay.apply(first_only)

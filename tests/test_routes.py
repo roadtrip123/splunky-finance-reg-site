@@ -308,3 +308,12 @@ def test_the_lab_page_carries_the_live_snippet_slot_and_no_key(registered):
     page = registered.get("/lab").text
     assert "data-integration-snippet" in page
     assert "test-llm-key" not in page and "YOUR_TOKEN" not in page
+
+
+def test_the_evaluator_steps_name_the_model_from_the_settings(client):
+    from app import runtime
+    page = client.get("/lab").text
+    assert page.count('<span class="model-alias">Test Model</span>') == 7
+    assert "data-model-alias" not in page
+    runtime.put("llm_model", "another-gateway-model")
+    assert '<span class="model-alias">Another Gateway Model</span>' in client.get("/lab").text

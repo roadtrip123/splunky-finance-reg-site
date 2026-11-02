@@ -3,8 +3,9 @@ import re
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from markupsafe import escape
 
-from .. import content, pages, store
+from .. import content, pages, runtime, store
 from ..config import settings
 from ..security import (
     COOKIE_MAX_AGE,
@@ -49,9 +50,21 @@ def home(request: Request):
                 step_count=len(steps), step_word=pages.number_word(len(steps)))
 
 
+MODEL_ALIAS_SLOT = '<span class="model-alias" data-model-alias>your custom model</span>'
+
+
+def with_model_alias(html):
+    """The judge model by the name Galileo's picker shows, from the gateway settings now in force."""
+    model = runtime.get("llm_model")
+    if not model or MODEL_ALIAS_SLOT not in html:
+        return html
+    return html.replace(MODEL_ALIAS_SLOT,
+                        f'<span class="model-alias">{escape(pages.model_alias(model))}</span>')
+
+
 def guide_page(request, key):
     meta = dict(pages.GUIDE_PAGES[key])
-    sections = content.sections(key)
+    sections = [{**s, "html": with_model_alias(s["html"])} for s in content.sections(key)]
     meta["title"] = meta["title"].format(count=pages.number_word(len(sections)))
     neighbour = {}
     for side in ("prev", "next"):

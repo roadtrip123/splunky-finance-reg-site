@@ -129,3 +129,9 @@ def gradient_lines(lines, spread=0.18):
         out.append([(ch, splunk_colour(start + (end - start) * i / steps))
                     for i, ch in enumerate(line)])
     return out
+
+
+def model_alias(model):
+    """What Galileo's model picker shows for the model: my-gateway-model reads as My Gateway
+    Model. The integration JSON and the evaluator steps both use it, so they always agree."""
+    return " ".join(word.capitalize() for word in model.replace("_", "-").split("-") if word)

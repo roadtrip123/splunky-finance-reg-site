@@ -7,16 +7,11 @@ from pydantic import BaseModel
 
 from .. import runtime, store
 from ..config import settings
+from ..pages import model_alias
 from ..tracker import SELF_STEPS
 from .public import current_participant
 
 router = APIRouter(prefix="/api")
-
-
-def model_alias(model):
-    """What Galileo's model picker shows for the model: my-gateway-model reads as My Gateway
-    Model."""
-    return " ".join(word.capitalize() for word in model.replace("_", "-").split("-") if word)
 
 
 def integration_snippet(base_url, model, key):
