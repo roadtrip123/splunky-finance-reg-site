@@ -68,6 +68,15 @@ participant's `/demo-admin` tab stays signed in, and the status read has no side
 `PROBE_INTERVAL` sets the seconds between looks (0 turns it off) and `STUCK_MINUTES` when a row
 turns amber.
 
+A model answering, a trace exported and a guardrail deciding are held in the instance's memory and
+reset when it restarts, so a step done before someone checked in, or before their instance
+restarted, shows once they do it again. To see why someone's row looks the way it does:
+
+```sh
+.venv/bin/python scripts/check_progress.py someone@example.com
+.venv/bin/python scripts/check_progress.py someone@example.com --url https://the-box-they-used.splunk.show
+```
+
 ## Settings on the admin page
 
 The passphrase, gateway URL, model, gateway key, Galileo account password and admin password can

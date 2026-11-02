@@ -31,7 +31,13 @@ GALILEO_CONNECTED = ("connected", "bound", "registered")
 
 def evaluate(ready, status):
     """(done, under_way, note) from an instance's /ready and presenter status. Either may be None
-    when it could not be read; what can be decided from the other still is."""
+    when it could not be read; what can be decided from the other still is.
+
+    On a deployed instance /ready is answered by the front end with a 404, so in practice the
+    presenter status carries everything: a provider_status of "unverified" means a model is
+    configured but has not answered yet. Model answers, trace exports and guardrail decisions are
+    held in the instance's memory and reset when it restarts, which is why the tracker records the
+    first time it sees each step and never forgets it."""
     done, partial, notes = set(), set(), []
     ready = ready or {}
     galileo = (status or {}).get("galileo") or {}
@@ -56,7 +62,7 @@ def evaluate(ready, status):
     exported = galileo.get("export") == "exported"
     if answered and exported:
         done.add(3)
-    elif answered or exported or ready.get("model") == "configured":
+    elif answered or exported or ready.get("model") == "configured" or provider == "unverified":
         partial.add(3)
         if provider == "failed":
             notes.append("model calls failing")

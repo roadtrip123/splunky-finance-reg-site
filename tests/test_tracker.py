@@ -177,3 +177,18 @@ def test_the_admin_board_shows_people_and_needs_the_admin(client):
     fragment = client.get("/admin/progress").text
     assert "Ada Lovelace" in fragment and "Step 1" in fragment
     assert "data-progress" in client.get("/admin").text
+
+
+def test_a_real_unconfigured_instance_shows_nothing():
+    """The shape a deployed instance returned: /ready is the front end's 404, so no ready data."""
+    real = {"galileo": {"state": "unconfigured", "connection": "unconfigured",
+                        "export": "not_attempted", "project_id": None, "log_stream_id": None,
+                        "last_error": "Galileo credentials missing"},
+            "provider_status": {"state": "unconfigured"}, "agent": {"state": "not_attempted"},
+            "protection_status": "unverified", "protection_stages": {}}
+    assert evaluate(None, real) == (set(), set(), "")
+
+
+def test_a_configured_model_shows_step_three_under_way_without_ready():
+    done, partial, _ = evaluate(None, status(CONNECTED, provider="unverified"))
+    assert done == {1, 2} and 3 in partial
