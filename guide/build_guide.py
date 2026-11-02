@@ -91,6 +91,43 @@ def collect_images(text, allow_fetch=True):
     return {i: name for i, name in have.items() if name}, missing
 
 
+RELATIVE = re.compile(r'src="(images/[^"]+)"')
+
+
+def relative_images(text, read):
+    """Images the guide commits beside itself (docs/images/...), copied into app/static/img and
+    returned as {relative path: file name}. read(path) gives the bytes from wherever the markdown
+    came from, the same git commit or the same folder, so text and images cannot drift apart."""
+    IMAGES.mkdir(parents=True, exist_ok=True)
+    found, missing = {}, []
+    for rel in sorted(set(RELATIVE.findall(text))):
+        name = Path(rel).name
+        target = IMAGES / name
+        blob = read(rel)
+        if blob and (not target.exists() or target.read_bytes() != blob):
+            target.write_bytes(blob)
+        if target.exists():
+            found[rel] = name
+        else:
+            missing.append(rel)
+    return found, missing
+
+
+def git_reader(repo, ref):
+    def read(rel):
+        result = subprocess.run(["git", "-C", str(repo), "show", f"{ref}:docs/{rel}"],
+                                capture_output=True)
+        return result.stdout if result.returncode == 0 else None
+    return read
+
+
+def folder_reader(folder):
+    def read(rel):
+        path = Path(folder) / rel
+        return path.read_bytes() if path.exists() else None
+    return read
+
+
 def slug(text):
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"[^\w\s-]", "", text.replace("&amp;", "and")).strip().lower()
@@ -173,15 +210,22 @@ def main():
 
     if args.markdown:
         text, source = Path(args.markdown).read_text(), args.markdown
+        read = folder_reader(Path(args.markdown).parent)
     else:
         text, source = markdown_from_git(Path(args.repo), args.ref)
+        read = git_reader(Path(args.repo), args.ref)
     print(f"guide source: {source}, {len(text.splitlines())} lines")
 
     if not args.no_overlay:
         text = overlay.apply(text)
         print("overlay applied: lab details card, model endpoint pointers, judge note")
 
+    local, local_missing = relative_images(text, read)
+    for rel, name in local.items():
+        text = text.replace(f'src="{rel}"', f'src="/static/img/{name}"')
     images, missing = collect_images(text, allow_fetch=not args.no_fetch)
+    images.update(local)
+    missing += local_missing
     for asset_id, name in images.items():
         text = text.replace(f"https://github.com/user-attachments/assets/{asset_id}",
                             f"/static/img/{name}")

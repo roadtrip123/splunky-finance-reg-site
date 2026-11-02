@@ -55,72 +55,21 @@ SNIPPET_NOW = """
 
 """
 
-# Upstream's screenshot of Galileo's custom-integration dialog carries hand-drawn EXAMPLE arrows
-# with sample values, a made-up key among them. The site shows a clean capture of the dialog.
-INTEGRATION_SHOT_WAS = (
-    '<img width="627" height="719" alt="image" '
-    'src="https://github.com/user-attachments/assets/81b1aacf-b573-49ef-a7b4-6da76a4eea64" />'
-)
-INTEGRATION_SHOT_NOW = (
-    '<img width="604" height="717" alt="Galileo Integration Settings, Custom: a name for the '
-    'integration and the Custom Integration box the JSON is pasted into" '
-    'src="/static/img/galileo-custom-integration.png" />'
-)
-
 # Each evaluator names the judge model precisely. The alias is the site's own, filled in at request
 # time from the gateway settings (see MODEL_ALIAS), so it follows a change made on the admin page and
 # the model's name is not written into this public repository.
 MODEL_ALIAS = '<span class="model-alias" data-model-alias>your custom model</span>'
-PICK_WAS = "Select the **LLM Model** that you configured earlier in this step,"
+PICK_WAS = "Select the model from the integration you added at the start of this step as the **LLM Model**,"
 PICK_NOW = f"Select **{MODEL_ALIAS}** as the **LLM Model**,"
-PICKER_WAS = ("The model picker lists the `alias` from your integration, for example 'GPT-4.1 mini', "
-              "or whatever you called your custom model, rather than the model name.")
+PICKER_WAS = ("The picker lists models by the `alias` from your integration, for example 'GPT-4.1 mini' "
+              "on OpenAI or whatever alias you gave a custom model, not by the model name.")
 PICKER_NOW = (f"That is the custom integration you added at the start of this step: the picker lists "
               f"models by their alias, so look for **{MODEL_ALIAS}**, not the gateway's model name.")
-INTEGRATION_KIND_WAS = ("2. Select the integration you want to use for your LLM judge for example "
-                        "OpenAI or Custom")
+INTEGRATION_KIND_WAS = ("2. Select the integration for your LLM judge: **Custom** for an "
+                        "OpenAI-compatible gateway such as\n   LiteLLM, or your provider's own, such as "
+                        "**OpenAI**")
 INTEGRATION_KIND_NOW = ("2. Select **Custom**: the judges use the same model gateway as the agent, "
                         f"and it appears in the evaluators as **{MODEL_ALIAS}**")
-
-# Why the faults are forced, said before the table rather than left to be inferred from it.
-FAULT_HEADING = "### Run one fault at a time\n"
-FAULT_WHY = """### Run one fault at a time
-
-**Why the failures are forced.** A well-behaved agent rarely gets these questions wrong, so you
-could wait a long time to see an evaluator catch a real mistake. The **Enable …** buttons in the
-presenter portal (`/demo-admin`) make the agent fail on purpose, each in one specific way: leaving
-part of the question unanswered, getting a total wrong, or answering about the wrong customer. That
-lets you watch each evaluator catch the failure it was built for, then pass again once you switch
-back to **Normal Answer**. Only the answer is forced. The evaluators are not staged: they score
-it exactly as they would a real mistake.
-"""
-
-# A worked example of one row of the fault table, captured by the instructor, because "enable,
-# ask, look" reads clearly and is still done out of order. Inserted after the table.
-FAULT_TABLE_END = "Then set the scenario back to **Normal Answer / Disabled Guardrails** and ask the same questions"
-FAULT_EXAMPLE = """**A worked example: Incomplete Answer**
-
-1. In the presenter portal (`/demo-admin`), under **Choose what to demonstrate**, click **Enable
-   Incomplete Answer**. The banner confirms it applies to your next message.
-
-   <img width="1114" height="482" alt="The presenter portal's Choose what to demonstrate panel, with Enable Incomplete Answer selected" src="/static/img/fault-incomplete-1-enable.png" />
-
-2. In the banking app, open **My Bank Agent** and ask the question from the **Incomplete Answer**
-   row of the table above. The answer leaves out part of what you asked: here it gives the number
-   of restaurant purchases but not what was spent. Use the table's question rather than the one in
-   the picture; it asks for two things, which makes the gap easier for the judge to see.
-
-   <img width="461" height="803" alt="The My Bank Agent chat: a question about restaurant spending, answered with a purchase count and no amount" src="/static/img/fault-incomplete-2-ask.png" />
-
-3. In Galileo, open your project, then your **Agent Stream**. On the newest row,
-   **SplunkyAnswerWholeQuestion** shows **false** while the other two evaluators stay **true**: only
-   the judge built for this fault catches it.
-
-   <img width="1789" height="228" alt="Galileo's tracing view: SplunkyAnswerWholeQuestion false, SplunkyNumericalCorrectness and SplunkyRightCustomer true" src="/static/img/fault-incomplete-3-galileo.png" />
-
-Do the same for the other two rows, one at a time, each with its own question.
-
-"""
 
 JUDGE_WAS = """**Use `gpt-4.1-mini` as the judge model.** Every accuracy figure in this lab was measured on it. A
 reasoning model is not a better judge here: on the same traces, GPT-5.1 caught one incomplete answer
@@ -164,13 +113,10 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
         + INTEGRATION,
     ),
     (INTEGRATION_KIND_WAS, INTEGRATION_KIND_NOW),
-    (INTEGRATION_SHOT_WAS, INTEGRATION_SHOT_NOW),
     (PICK_WAS, PICK_NOW, 3),
     (PICKER_WAS, PICKER_NOW, 3),
     (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
-    (FAULT_HEADING, FAULT_WHY),
-    (FAULT_TABLE_END, FAULT_EXAMPLE + FAULT_TABLE_END),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
     (
         "Your instructor gives you one URL, an account number and two passwords. Everything else "

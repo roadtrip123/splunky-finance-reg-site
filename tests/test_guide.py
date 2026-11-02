@@ -1,4 +1,5 @@
 """The guide build: the overlay's anchors, and what the published page must not contain."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,7 +13,8 @@ import overlay  # noqa: E402
 from tests.test_secrets import local_values  # noqa: E402
 
 REPO = Path.home() / "splunky-finance"
-REF = "origin/build-splunky-finance"
+# GUIDE_REF tests the overlay against a guide commit before it is pushed.
+REF = os.environ.get("GUIDE_REF", "origin/build-splunky-finance")
 
 
 @pytest.fixture(scope="module")
@@ -148,12 +150,10 @@ def test_the_placeholder_snippet_becomes_the_participants_own(upstream):
 
 
 def test_step_four_shows_the_clean_integration_screenshot(upstream):
-    """The upstream capture has hand-drawn example values, a made-up key among them."""
+    """The workshop guide now carries the clean capture itself, as a committed image."""
     overlaid = overlay.apply(upstream)
     assert "81b1aacf-b573-49ef-a7b4-6da76a4eea64" not in overlaid
-    assert 'src="/static/img/galileo-custom-integration.png"' in overlaid
-    image = Path(__file__).resolve().parent.parent / "app/static/img/galileo-custom-integration.png"
-    assert image.exists()
+    assert 'src="images/lab/galileo-custom-integration.png"' in overlaid
 
 
 def test_every_evaluator_names_the_judge_model(upstream):
@@ -173,13 +173,26 @@ def test_a_repeated_sentence_that_changes_count_upstream_fails_the_build(upstrea
 
 def test_the_fault_table_is_followed_by_a_worked_example_in_order(upstream):
     overlaid = overlay.apply(upstream)
+    assert overlaid.count("**A worked example: Incomplete Answer**") == 1
     example = overlaid.index("**A worked example: Incomplete Answer**")
     assert overlaid.index("| **Wrong Customer** |") < example < overlaid.index("Then set the scenario back")
-    shots = [overlaid.index(f"/static/img/fault-incomplete-{n}") for n in ("1-enable", "2-ask", "3-galileo")]
+    shots = [overlaid.index(f"images/lab/fault-incomplete-{n}") for n in ("1-enable", "2-ask", "3-galileo")]
     assert example < shots[0] < shots[1] < shots[2]
-    images = Path(__file__).resolve().parent.parent / "app/static/img"
-    for name in ("1-enable", "2-ask", "3-galileo"):
-        assert (images / f"fault-incomplete-{name}.png").exists()
+
+
+def test_the_guides_own_images_are_read_from_the_same_commit(upstream, tmp_path, monkeypatch):
+    monkeypatch.setattr(build_guide, "IMAGES", tmp_path)
+    found, missing = build_guide.relative_images(upstream, build_guide.git_reader(REPO, REF))
+    assert missing == []
+    assert found["images/lab/fault-incomplete-1-enable.png"] == "fault-incomplete-1-enable.png"
+    assert (tmp_path / "galileo-custom-integration.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_a_missing_committed_image_is_reported(tmp_path, monkeypatch):
+    monkeypatch.setattr(build_guide, "IMAGES", tmp_path)
+    found, missing = build_guide.relative_images('<img src="images/lab/nope.png" />',
+                                                 build_guide.folder_reader(tmp_path))
+    assert found == {} and missing == ["images/lab/nope.png"]
 
 
 def test_the_fault_section_explains_why_failures_are_forced(upstream):
@@ -188,3 +201,4 @@ def test_the_fault_section_explains_why_failures_are_forced(upstream):
     why = overlaid.index("**Why the failures are forced.**")
     assert section < why < overlaid.index("For each row: click")
     assert overlaid.count("### Run one fault at a time") == 1
+    assert overlaid.count("**Why the failures are forced.**") == 1
