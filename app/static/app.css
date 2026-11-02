@@ -574,6 +574,7 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
 .mark.self { color: #7CCB52; font-weight: 700; }
 .mark.partial { color: var(--orange); }
 .mark.none { color: var(--rule); }
+.mark.implied { color: var(--dim); }
 .legend { margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
 .amber-text { color: var(--orange); }
 .bad-text { color: var(--red); }

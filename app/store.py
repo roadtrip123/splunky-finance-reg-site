@@ -517,7 +517,12 @@ def progress_board(stuck_after=600, now=None):
     for person in people:
         seen = marks.get(person["id"], {})
         partial = {int(s) for s in (person["partial"] or "").split(",") if s}
-        cells, finished_at = [], {}
+        finished_at = {step: min(sources.values()) for step, sources in seen.items() if sources}
+        # Where someone is, is one past the furthest step reached. Not the first gap: steps 4 to 6
+        # only count when ticked, so the first gap would leave anyone who skips a tick looking
+        # stuck on a step they finished long ago.
+        furthest = max(finished_at) if finished_at else 0
+        cells = []
         for step in STEPS:
             sources = seen.get(step, {})
             if "auto" in sources:
@@ -526,17 +531,13 @@ def progress_board(stuck_after=600, now=None):
                 state = "self"
             elif step in partial:
                 state = "partial"
+            elif step < furthest:
+                state = "implied"  # not seen, but a later step was
             else:
                 state = "none"
-            if sources:
-                finished_at[step] = min(sources.values())
             cells.append({"step": step, "state": state})
-        current = next((s for s in STEPS if s not in finished_at), None)
-        if current is None:
-            since = None
-        else:
-            earlier = [finished_at[s] for s in finished_at if s < current]
-            since = max(earlier) if earlier else person["created_at"]
+        current = furthest + 1 if furthest < max(STEPS) else None
+        since = (finished_at[furthest] if furthest else person["created_at"]) if current else None
         minutes = int((now - since) // 60) if since else 0
         rows.append({
             **person,

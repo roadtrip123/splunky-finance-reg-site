@@ -193,3 +193,25 @@ def test_a_real_unconfigured_instance_shows_nothing():
 def test_a_configured_model_shows_step_three_under_way_without_ready():
     done, partial, _ = evaluate(None, status(CONNECTED, provider="unverified"))
     assert done == {1, 2} and 3 in partial
+
+
+def test_where_someone_is_is_one_past_their_furthest_step():
+    """Mohamed ticked step 5 on a box the board does not read: he is on step 6, not stuck on 1."""
+    person, _ = a_participant_on_an_instance()
+    start = person["created_at"]
+    store.mark_step(person["id"], 5, "self")
+    with store.writing() as db:
+        db.execute("UPDATE progress SET at=? WHERE participant_id=?", (start + 900, person["id"]))
+    row = store.progress_board(stuck_after=600, now=start + 900 + 120)[0]
+    assert row["current"] == 6 and row["minutes"] == 2 and not row["stuck"]
+    assert [c["state"] for c in row["cells"]] == [
+        "implied", "implied", "implied", "implied", "self", "none", "none", "none"]
+
+
+def test_skipping_the_tick_boxes_does_not_look_stuck():
+    person, _ = a_participant_on_an_instance()
+    for step in (1, 2, 3, 7, 8):
+        store.mark_step(person["id"], step, "auto")
+    row = store.progress_board()[0]
+    assert row["current"] is None
+    assert [c["state"] for c in row["cells"]][3:6] == ["implied", "implied", "implied"]
