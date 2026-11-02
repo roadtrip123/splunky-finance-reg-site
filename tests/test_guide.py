@@ -145,3 +145,12 @@ def test_the_placeholder_snippet_becomes_the_participants_own(upstream):
     assert "data-integration-snippet" in overlaid
     html, _ = build_guide.add_heading_ids(build_guide.render(overlaid))
     assert '<div class="live-snippet" data-integration-snippet></div>' in html
+
+
+def test_step_four_shows_the_clean_integration_screenshot(upstream):
+    """The upstream capture has hand-drawn example values, a made-up key among them."""
+    overlaid = overlay.apply(upstream)
+    assert "81b1aacf-b573-49ef-a7b4-6da76a4eea64" not in overlaid
+    assert 'src="/static/img/galileo-custom-integration.png"' in overlaid
+    image = Path(__file__).resolve().parent.parent / "app/static/img/galileo-custom-integration.png"
+    assert image.exists()

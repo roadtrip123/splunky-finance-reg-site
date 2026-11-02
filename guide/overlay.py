@@ -55,6 +55,18 @@ SNIPPET_NOW = """
 
 """
 
+# Upstream's screenshot of Galileo's custom-integration dialog carries hand-drawn EXAMPLE arrows
+# with sample values, a made-up key among them. The site shows a clean capture of the dialog.
+INTEGRATION_SHOT_WAS = (
+    '<img width="627" height="719" alt="image" '
+    'src="https://github.com/user-attachments/assets/81b1aacf-b573-49ef-a7b4-6da76a4eea64" />'
+)
+INTEGRATION_SHOT_NOW = (
+    '<img width="604" height="717" alt="Galileo Integration Settings, Custom: a name for the '
+    'integration and the Custom Integration box the JSON is pasted into" '
+    'src="/static/img/galileo-custom-integration.png" />'
+)
+
 JUDGE_WAS = """**Use `gpt-4.1-mini` as the judge model.** Every accuracy figure in this lab was measured on it. A
 reasoning model is not a better judge here: on the same traces, GPT-5.1 caught one incomplete answer
 in three, and `gpt-4.1-mini` caught them. The picker only lists models from the integration you
@@ -96,6 +108,7 @@ Open the app, sign in to banking, then open `/demo-admin` in **another tab of th
         "with no score, or with reasoning that will not parse, that is the first field to try as `true`.\n"
         + INTEGRATION,
     ),
+    (INTEGRATION_SHOT_WAS, INTEGRATION_SHOT_NOW),
     (SNIPPET_WAS, SNIPPET_NOW),
     (JUDGE_WAS, JUDGE_NOW),
     # The lab opens by telling people what the instructor hands out. On the portal they claim it.
