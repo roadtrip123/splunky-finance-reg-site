@@ -1,0 +1,35 @@
+{# The check-in card, used in the overview hero and on /register. #}
+<div class="checkin" id="check-in">
+  {% if participant %}
+    <p class="eyebrow cyan"><span class="live-dot"></span>Checked in</p>
+    <h2 class="checkin-title">Welcome back, {{ participant.name.split(' ')[0] }}.</h2>
+    <p class="checkin-text">Your instance{% if participant.box_url %} is
+      <a href="{{ participant.box_url }}" target="_blank" rel="noopener">{{ participant.box_url }}</a>{% else %}
+      is on its way: your instructor is adding more{% endif %}. Everything else is in your lab
+      details.</p>
+    <a class="button wide" href="/my-lab">Open my lab</a>
+  {% elif closed %}
+    <p class="eyebrow orange">Check-in closed</p>
+    <p class="checkin-text">Every seat for this session has been claimed. Speak to your
+       instructor.</p>
+  {% else %}
+    <p class="eyebrow cyan"><span class="live-dot"></span>Lab check-in</p>
+    <p class="checkin-text">Type the passphrase your instructor gives you. Checked in already?
+       Use the same email to pick up where you left off.</p>
+    {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+    <form method="post" action="/register" class="form" autocomplete="off">
+      <label>Passphrase
+        <input name="passphrase" type="password" required placeholder="from your instructor">
+      </label>
+      <label>Your name
+        <input name="name" value="{{ name or '' }}" required placeholder="e.g. Ada Lovelace">
+      </label>
+      <label>Work email
+        <input name="email" type="email" value="{{ email or '' }}" required
+               placeholder="you@company.com">
+        <small>Your Galileo account is created for this address.</small>
+      </label>
+      <button type="submit" class="wide">Claim my lab</button>
+    </form>
+  {% endif %}
+</div>

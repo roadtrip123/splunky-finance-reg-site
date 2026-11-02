@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Check in{% endblock %}
+{% block body %}
+<section class="solo">
+  <div class="solo-head">
+    <p class="eyebrow cyan">Step 00 &middot; Check in</p>
+    <h1 class="story">Claim your lab.<br><em>About five seconds.</em></h1>
+    <p class="lede">Your own copy of the bank, your own Galileo account, and the model details
+       the agent and the judges need.</p>
+    {% if counts and counts.boxes_total %}
+      <p class="muted small mono">{{ counts.participants }} checked in &middot;
+        {{ counts.boxes_free }} instances free</p>
+    {% endif %}
+  </div>
+  {% include "_checkin.html" %}
+</section>
+{% endblock %}

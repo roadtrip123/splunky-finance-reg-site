@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Instructor{% endblock %}
+{% block dock %}{% endblock %}
+{% block body %}<main class="wrap">
+<div class="admin">
+  <div class="admin-head">
+    <div>
+      <p class="eyebrow">Instructor console</p>
+      <h1>Splunky Finance lab</h1>
+    </div>
+    <div class="admin-actions">
+      <a class="button ghost" href="/admin/export.csv">Export roster CSV</a>
+      <form method="post" action="/admin/logout"><button class="link">Sign out</button></form>
+    </div>
+  </div>
+
+  {% if message %}<div class="notice good">{{ message }}</div>{% endif %}
+  {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+  {% if missing %}
+    <div class="notice warn"><strong>Not configured:</strong> {{ missing|join(', ') }}.
+      Set these in <code>.env</code> and restart, or participants will see blanks.</div>
+  {% endif %}
+  {% if status.dry_run %}
+    <div class="notice warn"><strong>Dry run.</strong> No Galileo account is really created;
+      each participant is shown their own address as if it had been. Set <code>DRY_RUN=0</code>
+      for the real event.</div>
+  {% endif %}
+
+  <div class="tiles">
+    <div class="tile"><b>{{ counts.participants }}</b><span>registered</span></div>
+    <div class="tile"><b>{{ counts.boxes_free }}</b><span>instances free</span></div>
+    <div class="tile"><b>{{ counts.boxes_assigned }}</b><span>instances in use</span></div>
+    <div class="tile {% if counts.waiting %}amber{% endif %}">
+      <b>{{ counts.waiting }}</b><span>waiting for an instance</span></div>
+    <div class="tile"><b>{{ counts.galileo.get('ready', 0) }}</b><span>accounts created</span></div>
+    <div class="tile {% if counts.galileo.get('pool', 0) %}amber{% endif %}">
+      <b>{{ counts.galileo.get('pool', 0) }}</b><span>on fallback accounts</span></div>
+    <div class="tile {% if counts.galileo.get('failed', 0) %}red{% endif %}">
+      <b>{{ counts.galileo.get('failed', 0) }}</b><span>failed</span></div>
+    <div class="tile"><b>{{ counts.pool_free }}/{{ counts.pool_total }}</b><span>fallback left</span></div>
+  </div>
+
+  <section class="card">
+    <h2>Account creation</h2>
+    {% if status.armed %}
+      <p class="state on">&#9679; ARMED{% if status.identity.email %} as {{ status.identity.email }}{% endif %}
+         {% if status.armed_at %}since {{ status.armed_at|clock }}{% endif %}</p>
+      <p class="muted small">Created in this session: {{ status.created_here }}.
+         The token is in memory only and is lost on restart.</p>
+      <form method="post" action="/admin/disarm"><button class="danger">Disarm</button></form>
+    {% else %}
+      <p class="state off">&#9675; DISARMED</p>
+      <p class="muted small">Nothing is being created. Anyone registering now waits two minutes
+         and is then handed a fallback account, if any are left. Paste a Galileo admin API key to
+         arm; it is exchanged for a token and the key itself is not kept.</p>
+      <form method="post" action="/admin/arm" class="row-form" autocomplete="off">
+        <input name="api_key" type="password" placeholder="Galileo admin API key" required>
+        <button type="submit">Arm</button>
+      </form>
+    {% endif %}
+    {% if status.last_error %}
+      <p class="muted small">Last error: <code>{{ status.last_error }}</code></p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Instances</h2>
+    <p class="muted small">Upload the Splunk Show URLs. A CSV with a <code>url</code> column, or
+       one URL per line. Uploading again adds new ones and skips any already here, so a second
+       batch later is safe. Do not include this box's own URL.</p>
+    <form method="post" action="/admin/boxes" enctype="multipart/form-data" class="stack-form">
+      <input type="file" name="file" accept=".csv,.txt">
+      <textarea name="pasted" rows="4" placeholder="https://p01.splunk.show&#10;https://p02.splunk.show"></textarea>
+      <button type="submit">Add instances</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Fallback accounts</h2>
+    <p class="muted small">The pre-made Galileo accounts, used only when creation fails or is
+       disarmed. Upload <code>users-110.csv</code> or paste the addresses.</p>
+    <form method="post" action="/admin/pool" enctype="multipart/form-data" class="stack-form">
+      <input type="file" name="file" accept=".csv,.txt">
+      <textarea name="pasted" rows="3" placeholder="participant1@galileo.ai"></textarea>
+      <button type="submit">Add fallback accounts</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Roster <span class="muted small">{{ roster|length }} people</span></h2>
+    {% if not roster %}
+      <p class="muted">Nobody has registered yet.</p>
+    {% else %}
+    <table class="grid">
+      <thead><tr><th>When</th><th>Name</th><th>Email</th><th>Instance</th><th>Galileo</th>
+                 <th></th></tr></thead>
+      <tbody>
+      {% for row in roster %}
+        <tr>
+          <td class="small">{{ row.created_at|clock }}</td>
+          <td>{{ row.name }}{% if row.state == 'released' %}<span class="small muted"> left</span>{% endif %}</td>
+          <td class="small">{{ row.email }}</td>
+          <td class="small">{{ row.box_url or 'waiting' }}</td>
+          <td>
+            <span class="badge {{ row.galileo_state }}">{{ row.galileo_state }}</span>
+            {% if row.galileo_email %}<span class="small">{{ row.galileo_email }}</span>{% endif %}
+            {% if row.galileo_error %}<div class="small muted">{{ row.galileo_error }}</div>{% endif %}
+          </td>
+          <td class="row-buttons">
+            {% if row.galileo_state in ('failed', 'pool') %}
+              <form method="post" action="/admin/retry/{{ row.id }}"><button class="link">retry</button></form>
+            {% endif %}
+            {% if row.box_id %}
+              <form method="post" action="/admin/release/{{ row.id }}"><button class="link">release</button></form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Recent activity</h2>
+    <ul class="events">
+      {% for event in events %}
+        <li><span class="small muted">{{ event.at|clock }}</span>
+            <code>{{ event.kind }}</code> {{ event.detail }}</li>
+      {% else %}
+        <li class="muted">Nothing yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+</main>{% endblock %}

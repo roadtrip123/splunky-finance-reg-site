@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+<section class="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <div class="dashes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="eyebrow">Hands-on lab &middot; Splunky Finance &middot; {{ step_count }} steps</p>
+      <h1 class="display splunk">
+        <span>Splunk Agent</span>
+        <span>Observability</span>
+      </h1>
+      <p class="tagline">Observe, evaluate, and secure the agents, models, and infrastructure
+         behind your AI.</p>
+      <p class="lede">In this lab you get your own copy of a fictional bank, its AI agent wired to
+         Galileo. Build the evaluators that catch a wrong answer, then the guardrail that stops an
+         unsafe one.</p>
+      <p class="bring"><strong>Bring your laptop</strong> with a browser. Nothing to install.</p>
+      <p class="textlinks">
+        <a href="/briefing">Read the briefing &rarr;</a>
+        <a href="/lab">Open the workshop lab &rarr;</a>
+      </p>
+      {% if settings.event_date or settings.event_place %}
+        <p class="event">
+          {% if settings.event_date %}<span>{{ settings.event_date }}</span>{% endif %}
+          {% if settings.event_date and settings.event_place %} &middot; {% endif %}
+          {% if settings.event_place %}<em>{{ settings.event_place }}</em>{% endif %}
+        </p>
+      {% endif %}
+    </div>
+    {% include "_checkin.html" %}
+  </div>
+</section>
+<div class="stripe band" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<section class="section">
+  <span class="bar cyan" aria-hidden="true"></span>
+  <p class="eyebrow">How it runs</p>
+  <h2 class="headline">Three steps to <span class="hl">your first trace.</span></h2>
+  <div class="runs">
+    <div class="run c-cyan">
+      <b>01 &middot; Check in</b>
+      <h3>Claim your lab</h3>
+      <p>The passphrase from the room gets you your own copy of the bank and a Galileo account
+         made for your email.</p>
+    </div>
+    <div class="run c-magenta">
+      <b>02 &middot; Connect</b>
+      <h3>Wire the agent up</h3>
+      <p><a href="/briefing">Follow the briefing</a>: point the agent at your Galileo project and at
+         the model, then find your first question as a trace.</p>
+    </div>
+    <div class="run c-orange">
+      <b>03 &middot; Catch</b>
+      <h3>Judge it, then guard it</h3>
+      <p>Three evaluators that score every answer, and a guardrail that refuses an unsafe action
+         before it runs.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <span class="bar magenta" aria-hidden="true"></span>
+  <p class="eyebrow">The lab</p>
+  <h2 class="headline">{{ step_word }} steps, <span class="hl">one agent you can trust.</span></h2>
+  <div class="stats">
+    <div class="stat"><strong>{{ step_count }}</strong><i class="cyan"></i><span>Steps</span></div>
+    <div class="stat"><strong>3</strong><i class="magenta"></i><span>Evaluators</span></div>
+    <div class="stat"><strong>1</strong><i class="orange"></i><span>Guardrail</span></div>
+    <div class="stat"><strong>0</strong><i class="blue"></i><span>Installs</span></div>
+  </div>
+  <div class="cards">
+    {% for step in steps %}
+      <a class="card-lab t-{{ step.tag|lower }}" href="{{ step.href }}">
+        <div class="card-head">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="card-num">Step {{ '%02d'|format(step.step) }}</span>
+          <span class="pill">{{ step.tag }}</span>
+        </div>
+        <div class="card-body">
+          <h3>{{ step.short }}</h3>
+          {% if step.blurb %}<p>{{ step.blurb }}</p>{% endif %}
+        </div>
+        <div class="card-foot">
+          <span>{{ 'Briefing & Setup' if step.group == 'briefing' else 'Workshop lab' }}</span>
+          <span>Open &rarr;</span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <span class="bar orange" aria-hidden="true"></span>
+  <p class="eyebrow">House rules</p>
+  <h2 class="headline">Four things <span class="hl">worth knowing.</span></h2>
+  <div class="rules">
+    {% for title, text in rules %}
+      <div class="rule"><span class="rule-num">{{ '%02d'|format(loop.index) }}</span>
+        <h3>{{ title }}</h3><p>{{ text }}</p></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="cta">
+  <div>
+    <p class="eyebrow">Ready</p>
+    <h2>Start with the briefing.</h2>
+    <p>Three setup steps, then the lab. Your details are one click away on every page.</p>
+  </div>
+  <a class="button" href="/briefing">Read the briefing &rarr;</a>
+</section>
+{% endblock %}

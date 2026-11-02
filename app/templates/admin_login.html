@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Instructor sign-in{% endblock %}
+{% block dock %}{% endblock %}
+{% block body %}<main class="wrap">
+<div class="narrow">
+  <p class="eyebrow">Instructor console</p>
+  <h1>Sign in</h1>
+  {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+  <form method="post" action="/admin/login" class="card form">
+    <label>Admin password
+      <input name="password" type="password" required autofocus>
+    </label>
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</main>{% endblock %}

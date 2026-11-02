@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}My lab{% endblock %}
+{% block body %}
+<section class="page-head">
+  <div class="page-head-inner">
+    <p class="eyebrow cyan"><span class="live-dot"></span>Checked in</p>
+    <h1 class="story">Hello {{ participant.name.split(' ')[0] }}.<br><em>Here is your lab.</em></h1>
+    <p class="lede">Keep this tab open. Everything here is yours for the session, and the same
+       details are behind the button at the bottom right of every page.</p>
+  </div>
+</section>
+<div class="narrow">
+  <div data-lab-details></div>
+  <div class="cta compact">
+    <div>
+      <p class="eyebrow">Next</p>
+      <h2>Start at Step 1.</h2>
+      <p>Create your Galileo project and log stream. The details above are what it asks for.</p>
+    </div>
+    <a class="button" href="/briefing#step-1-create-your-galileo-project">Open the briefing &rarr;</a>
+  </div>
+  <form method="post" action="/forget" class="quiet-form">
+    <button type="submit" class="link">Not you? Clear this browser</button>
+  </form>
+</div>
+{% endblock %}

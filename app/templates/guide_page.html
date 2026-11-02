@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.eyebrow|title }}{% endblock %}
+{% block body %}
+<section class="page-head with-toc">
+  <div class="page-head-inner">
+    <p class="eyebrow {{ meta.accent }}">{{ meta.eyebrow }}</p>
+    <h1 class="story">{{ meta.title }}<br><em>{{ meta.title_em }}</em></h1>
+    <p class="lede">{{ meta.lede }}</p>
+  </div>
+</section>
+{% if intro %}
+<section class="intro-wrap with-toc">
+  <div class="intro">{{ intro|safe }}</div>
+</section>
+{% endif %}
+<div class="guide-layout">
+  <aside class="toc">
+    <p class="toc-title">On this page</p>
+    <ol>
+      {% for section in sections %}
+        <li><a href="#{{ section.id }}">{{ section.title }}</a></li>
+      {% endfor %}
+    </ol>
+  </aside>
+  <article class="guide">
+    {% if here == 'briefing' %}<div class="inline-details" data-lab-details></div>{% endif %}
+    {% for section in sections %}
+      <section class="guide-section">{{ section.html|safe }}</section>
+    {% endfor %}
+    <nav class="pager" aria-label="Pages">
+      {% if neighbour.prev %}
+        <a class="pager-link prev" href="{{ neighbour.prev.path }}">
+          <small>&larr; Previous</small><span>{{ neighbour.prev.name }}</span></a>
+      {% else %}<span></span>{% endif %}
+      {% if neighbour.next %}
+        <a class="pager-link next" href="{{ neighbour.next.path }}">
+          <small>Next &rarr;</small><span>{{ neighbour.next.name }}</span></a>
+      {% endif %}
+    </nav>
+  </article>
+</div>
+{% endblock %}

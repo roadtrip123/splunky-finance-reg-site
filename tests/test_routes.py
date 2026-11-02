@@ -1,0 +1,188 @@
+"""The pages, and the line between what a visitor can read and what a participant can."""
+from app import security, store
+from app.config import settings
+from tests.conftest import add_boxes
+
+SECRETS = ["test-llm-key", "test-galileo-password", "test-bank-password",
+           "test-presenter-password", "test-passphrase", "test-admin"]
+
+
+def test_every_page_is_public_and_carries_no_credentials(client):
+    """The whole point of the details card: the guide can be handed to anyone, and nothing in the
+    page source gets them into an instance or onto the gateway."""
+    for path in ("/", "/briefing", "/lab", "/troubleshooting", "/register"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert "Splunky Finance" in response.text, path
+        for secret in SECRETS:
+            assert secret not in response.text, (path, secret)
+
+
+def test_every_page_carries_the_menu_and_marks_where_you_are(client):
+    for path, label in (("/briefing", "Briefing &amp; Setup"), ("/lab", "Workshop lab"),
+                        ("/troubleshooting", "Troubleshooting")):
+        page = client.get(path).text
+        for _, href, _ in (("home", "/", ""), ("b", "/briefing", ""), ("l", "/lab", "")):
+            assert f'href="{href}"' in page
+        assert f'class="here" aria-current="page">{label}</a>' in page
+
+
+def test_the_overview_offers_check_in_until_you_have(client):
+    page = client.get("/").text
+    assert 'id="check-in"' in page and 'name="passphrase"' in page
+    client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada Lovelace", "email": "ada@example.com"})
+    page = client.get("/").text
+    assert 'name="passphrase"' not in page
+    assert "Welcome back, Ada." in page
+
+
+def test_the_wrong_passphrase_creates_nothing(client):
+    response = client.post("/register", data={
+        "passphrase": "not-it", "name": "Mallory", "email": "mallory@example.com"})
+    assert response.status_code == 403
+    assert "passphrase" in response.text.lower()
+    assert store.by_email("mallory@example.com") is None
+    assert store.counts()["participants"] == 0
+
+
+def test_the_passphrase_is_checked_before_the_email(client):
+    """An unauthorised visitor must not be able to tell whether an address is registered, and must
+    not be able to create Galileo accounts in the tenant by submitting addresses."""
+    store.register("Ada", "ada@example.com")
+
+    def attempt(email):
+        response = client.post("/register", data={
+            "passphrase": "not-it", "name": "Mallory", "email": email})
+        return response.status_code, response.text.replace(email, "EMAIL")
+
+    assert attempt("ada@example.com") == attempt("nobody@example.com")
+    assert attempt("ada@example.com")[0] == 403
+
+
+def test_registering_lands_on_my_lab_with_a_cookie(client):
+    add_boxes(1)
+    response = client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada Lovelace", "email": "ada@example.com"})
+    assert response.status_code == 200
+    assert "here is your lab" in response.text.lower()
+    assert "lab_participant" in client.cookies
+
+
+def test_a_bad_email_is_refused_without_consuming_an_instance(client):
+    add_boxes(1)
+    response = client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada", "email": "not-an-email"})
+    assert response.status_code == 400
+    assert store.counts()["boxes_free"] == 1
+
+
+def test_credentials_need_the_cookie(client):
+    assert client.get("/api/credentials").status_code == 401
+
+
+def test_a_registered_participant_gets_the_model_details(registered):
+    add_boxes(1)
+    body = registered.get("/api/credentials").json()
+    assert body["llm"] == {
+        "base_url": "https://llm.example/v1",
+        "model": "test-model",
+        "api_key": "test-llm-key",
+        "integration_json": body["llm"]["integration_json"],
+    }
+    assert "Bearer test-llm-key" in body["llm"]["integration_json"]
+    assert body["instance"]["password"] == "test-bank-password"
+
+
+def test_the_galileo_password_is_withheld_until_the_account_exists(registered):
+    body = registered.get("/api/credentials").json()
+    assert body["galileo"]["ready"] is False
+    assert body["galileo"]["password"] == ""
+    participant = store.by_email("ada@example.com")
+    store.set_galileo(participant["id"], "ready", email="ada@example.com")
+    body = registered.get("/api/credentials").json()
+    assert body["galileo"]["ready"] is True
+    assert body["galileo"]["password"] == "test-galileo-password"
+
+
+def test_a_forged_cookie_is_refused(client):
+    client.cookies.set("lab_participant", "sometoken.deadbeef")
+    assert client.get("/api/credentials").status_code == 401
+
+
+def test_a_script_hammering_the_form_is_slowed_down(client, monkeypatch):
+    monkeypatch.setattr(security.passphrase_attempts, "limit", 3)
+    codes = [client.post("/register", data={
+        "passphrase": "wrong", "name": "M", "email": "m@example.com"}).status_code
+        for _ in range(5)]
+    assert codes == [403, 403, 403, 429, 429]
+
+
+def test_the_limits_are_loose_enough_for_a_room_on_one_wifi():
+    """A hundred people behind the venue's NAT arrive from one address. A limit that locks them out
+    of each other's registrations is a worse failure than the one it prevents."""
+    assert security.passphrase_attempts.limit >= 100
+    assert security.registrations.limit >= 100
+
+
+def test_registration_closes_at_the_cap(client, monkeypatch):
+    monkeypatch.setattr(settings, "account_cap", 1)
+    store.register("First", "first@example.com")
+    response = client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Second", "email": "second@example.com"})
+    assert response.status_code == 409
+    assert "closed" in response.text.lower()
+
+
+def test_my_lab_sends_a_stranger_to_the_form(client):
+    response = client.get("/my-lab", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/register"
+
+
+def test_clearing_the_browser_keeps_the_instance_for_that_email(registered):
+    add_boxes(1)
+    before = store.by_email("ada@example.com")["box_id"]
+    registered.post("/forget")
+    assert store.by_email("ada@example.com")["box_id"] == before
+
+
+def test_the_admin_page_asks_for_a_password(client):
+    page = client.get("/admin")
+    assert page.status_code == 200
+    assert "Admin password" in page.text
+    assert "Roster" not in page.text
+
+
+def test_admin_uploads_instances_and_arms_nothing_by_accident(client):
+    client.post("/admin/login", data={"password": "test-admin"})
+    response = client.post("/admin/boxes", data={"pasted": "https://p01.example.show"})
+    assert "Added 1 instance" in response.text
+    assert store.counts()["boxes_total"] == 1
+    assert client.get("/healthz").json()["armed"] is False
+
+
+def test_admin_actions_refuse_a_stranger(client):
+    for path in ("/admin/boxes", "/admin/pool", "/admin/arm", "/admin/disarm"):
+        response = client.post(path, data={"pasted": "https://x.example", "api_key": "k"},
+                               follow_redirects=False)
+        assert response.status_code == 303, path
+    assert store.counts()["boxes_total"] == 0
+    export = client.get("/admin/export.csv", follow_redirects=False)
+    assert export.status_code == 303
+
+
+def test_an_instance_list_uploaded_as_the_pool_is_rejected(client):
+    client.post("/admin/login", data={"password": "test-admin"})
+    response = client.post("/admin/pool", data={"pasted": "https://p01.example.show"})
+    assert "No email addresses" in response.text
+    assert store.counts()["pool_total"] == 0
+
+
+def test_the_export_is_a_csv_attachment(client):
+    add_boxes(1)
+    store.register("Ada Lovelace", "ada@example.com")
+    client.post("/admin/login", data={"password": "test-admin"})
+    response = client.get("/admin/export.csv")
+    assert response.headers["content-disposition"].endswith('filename="lab-roster.csv"')
+    assert "ada@example.com" in response.text

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Splunky Finance Lab{% endblock %} &middot; Splunk</title>
+<meta name="description" content="Splunk Agent Observability hands-on lab: observe, evaluate, and secure the agents, models, and infrastructure behind your AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="at-{{ here or 'other' }}">
+<canvas class="net" aria-hidden="true"></canvas>
+
+<header class="top">
+  <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="top-inner">
+    <a class="brand" href="/" aria-label="Splunky Finance Lab, home">
+      {% if brand_logo() %}
+        <img class="brand-logo" src="{{ brand_logo() }}" alt="Splunk">
+      {% else %}
+        <span class="wordmark" aria-hidden="true">splunk<b>&gt;</b></span>
+      {% endif %}
+      <span class="brand-rule" aria-hidden="true"></span>
+      <span class="brand-title">
+        <strong>Splunky Finance Lab</strong>
+        <small>Agent observability &middot; hands-on</small>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Lab pages">
+      {% for key, path, label in nav %}
+        <a href="{{ path }}"{% if here == key %} class="here" aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% if participant %}
+      <a class="pass" href="/my-lab"><span class="live-dot"></span>My lab</a>
+    {% else %}
+      <a class="pass" href="/#check-in">Check in</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="page">
+{% block body %}{% endblock %}
+</div>
+
+<footer class="foot">
+  <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="foot-inner">
+    <span class="wordmark small" aria-hidden="true">splunk<b>&gt;</b></span>
+    <p>Synthetic data, a fictional bank, and no real banking action anywhere in it.
+       Your instance is yours alone.</p>
+    <nav aria-label="Footer">
+      {% for key, path, label in nav %}<a href="{{ path }}">{{ label }}</a>{% endfor %}
+    </nav>
+  </div>
+</footer>
+
+{% block dock %}
+<button class="dock" type="button" data-drawer-open aria-controls="lab-drawer">
+  <span class="dock-icon" aria-hidden="true"></span><span class="dock-long">Your lab details</span><span class="dock-short">My lab</span>
+</button>
+<div class="drawer" id="lab-drawer" data-drawer hidden>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Your lab details">
+    <button class="drawer-close" type="button" data-drawer-close aria-label="Close">&times;</button>
+    <div data-lab-details></div>
+  </div>
+</div>
+{% endblock %}
+<script src="/static/app.js"></script>
+</body>
+</html>

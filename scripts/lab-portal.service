@@ -1,0 +1,25 @@
+[Unit]
+Description=Splunky Finance lab portal
+Documentation=https://github.com/roadtrip123/splunky-finance-reg-site
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__ROOT__
+EnvironmentFile=__ROOT__/.env
+ExecStart=__ROOT__/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port __PORT__ \
+  --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+# The roster is the only thing the service writes, and it is the only thing worth keeping.
+ReadWritePaths=__ROOT__/data
+
+[Install]
+WantedBy=multi-user.target

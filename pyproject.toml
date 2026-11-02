@@ -1,0 +1,38 @@
+[project]
+name = "splunky-lab-portal"
+version = "0.1.0"
+description = "Registration portal and lab guide for the Splunky Finance workshop"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.141.1",
+  "uvicorn>=0.35,<1",
+  "jinja2>=3.1,<4",
+  "python-multipart>=0.0.20,<1",
+  "requests>=2.32,<3",
+  "markdown-it-py>=3.0,<4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app", "app.routes"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9", "httpx>=0.28,<1", "ruff>=0.14,<1"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+# Explicit, so the gate is this repo's and not whatever ruff defaults to on the box.
+select = ["E", "F", "I", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# The overlay's anchors are text copied verbatim from the lab guide. Rewrapping them to fit a
+# line length would stop them matching, which is the one thing they must not do.
+"guide/overlay.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
