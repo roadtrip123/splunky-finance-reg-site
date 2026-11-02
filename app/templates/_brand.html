@@ -1,0 +1,5 @@
+{# The splunk> wordmark. The chevron is a small vector in Splunk's gradient rather than a ">"
+   with a gradient clipped to it, so it stays sharp on every screen. Each use needs its own id. #}
+{% macro wordmark(id, small=False) -%}
+<span class="wordmark{{ ' small' if small }}" aria-hidden="true">splunk<svg class="chevron" viewBox="0 0 10 12" focusable="false"><defs><linearGradient id="{{ id }}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EB008B"/><stop offset=".55" stop-color="#F05A22"/><stop offset="1" stop-color="#F99D1C"/></linearGradient></defs><path d="M2 1.4 L8.7 6 L2 10.6" fill="none" stroke="url(#{{ id }})" stroke-width="2.8" stroke-linejoin="miter" stroke-miterlimit="10"/></svg></span>
+{%- endmacro %}

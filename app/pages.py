@@ -89,3 +89,43 @@ HOUSE_RULES = [
     ("Stuck for five minutes?",
      "Check the troubleshooting page first, then put your hand up."),
 ]
+
+
+# ---------------------------------------------------------------- the headline
+
+HEADLINE = ["Splunk Agent", "Observability"]
+
+# Splunk's brand gradient, as splunk.com defines it, starting at its highlight pink: #CE0070 is
+# 3.3:1 on this navy and reads as blurred, #EB008B holds 4.2:1.
+SPLUNK_STOPS = [(0.0, "#EB008B"), (0.30, "#EE1D62"), (0.58, "#F05A22"), (0.76, "#F4781F"),
+                (1.0, "#F99D1C")]
+
+
+def splunk_colour(t):
+    """The colour at position t (0 to 1) along the Splunk gradient."""
+    t = max(0.0, min(1.0, t))
+    for (a, low), (b, high) in zip(SPLUNK_STOPS, SPLUNK_STOPS[1:]):
+        if t <= b:
+            f = (t - a) / (b - a)
+            rgb = [round(int(low[i:i + 2], 16) * (1 - f) + int(high[i:i + 2], 16) * f)
+                   for i in (1, 3, 5)]
+            return "#{:02X}{:02X}{:02X}".format(*rgb)
+    return SPLUNK_STOPS[-1][1]
+
+
+def gradient_lines(lines, spread=0.18):
+    """Each letter of the headline as (character, solid colour), sampled along the gradient by its
+    place in the headline, the lower line shifted along so the sweep runs diagonally.
+
+    Solid letters rather than a gradient clipped to the text: Chrome paints clipped text through a
+    mask that can come out softer than ordinary text on a Retina screen, and solid text is drawn
+    like every other word on the page."""
+    count = len(lines)
+    out = []
+    for index, line in enumerate(lines):
+        start = spread * index / max(1, count - 1)
+        end = 1 - spread * (count - 1 - index) / max(1, count - 1)
+        steps = max(1, len(line) - 1)
+        out.append([(ch, splunk_colour(start + (end - start) * i / steps))
+                    for i, ch in enumerate(line)])
+    return out

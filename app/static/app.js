@@ -131,6 +131,17 @@
   wire();
   if (slots.length) load();
 
+  /* Show or hide a password field, for the passphrase on the admin page. */
+  document.addEventListener("click", function (event) {
+    var toggle = event.target.closest("[data-reveal-toggle]");
+    if (!toggle) return;
+    var input = toggle.parentNode.querySelector("[data-reveal-input]");
+    if (!input) return;
+    var hidden = input.type === "password";
+    input.type = hidden ? "text" : "password";
+    toggle.textContent = hidden ? "Hide" : "Show";
+  });
+
   /* The lab-details drawer, opened from the dock at the bottom right of every page. */
   var drawer = document.querySelector("[data-drawer]");
   function openDrawer() {

@@ -6,9 +6,10 @@
     <div class="hero-copy">
       <div class="dashes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <p class="eyebrow">Hands-on lab &middot; Splunky Finance &middot; {{ step_count }} steps</p>
-      <h1 class="display splunk">
-        <span>Splunk Agent</span>
-        <span>Observability</span>
+      <h1 class="display" aria-label="Splunk Agent Observability">
+        {%- for line in headline %}
+        <span class="line" aria-hidden="true">{% for ch, colour in line %}<span style="color: {{ colour }}">{{ ch }}</span>{% endfor %}</span>
+        {%- endfor %}
       </h1>
       <p class="tagline">Observe, evaluate, and secure the agents, models, and infrastructure
          behind your AI.</p>

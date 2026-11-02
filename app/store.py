@@ -48,6 +48,11 @@ CREATE TABLE IF NOT EXISTS events (
   kind TEXT NOT NULL,
   detail TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at REAL NOT NULL
+);
 CREATE INDEX IF NOT EXISTS boxes_state ON boxes(state);
 CREATE INDEX IF NOT EXISTS participants_state ON participants(galileo_state);
 """
@@ -109,6 +114,27 @@ def log(db, kind, detail=""):
 
 def normalise(email):
     return (email or "").strip().lower()
+
+
+# ---------------------------------------------------------------- runtime settings
+
+def get_config(key):
+    """(value, updated_at) for a setting changed from the admin page, or (None, None)."""
+    db = connect()
+    try:
+        row = db.execute("SELECT value, updated_at FROM config WHERE key=?", (key,)).fetchone()
+        return (row["value"], row["updated_at"]) if row else (None, None)
+    finally:
+        db.close()
+
+
+def set_config(key, value):
+    with writing() as db:
+        db.execute("INSERT INTO config (key, value, updated_at) VALUES (?,?,?)"
+                   " ON CONFLICT(key) DO UPDATE SET value=excluded.value,"
+                   " updated_at=excluded.updated_at", (key, value, time.time()))
+        # The event says that it changed, never what to.
+        log(db, "config-changed", key)
 
 
 # ---------------------------------------------------------------- boxes and pool

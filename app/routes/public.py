@@ -43,6 +43,7 @@ def home(request: Request):
                       if section["group"] in pages.GUIDE_PAGES else "/lab"})
     counts = store.counts()
     return page(request, "home.html", here="home", steps=steps, rules=pages.HOUSE_RULES,
+                headline=pages.gradient_lines(pages.HEADLINE),
                 counts=counts, closed=counts["participants"] >= settings.account_cap,
                 step_count=len(steps), step_word=pages.number_word(len(steps)))
 

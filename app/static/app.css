@@ -105,10 +105,8 @@ code { font-family: var(--mono); font-size: .88em; }
   font-family: var(--sans); font-weight: 800; font-size: 27px; letter-spacing: -.045em;
   line-height: 1; color: var(--white);
 }
-.wordmark b {
-  font-weight: 800; margin-left: 1px; background: var(--splunk-gradient);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+.chevron { width: .40em; height: .50em; margin-left: .05em; vertical-align: baseline;
+           overflow: visible; }
 .wordmark.small { font-size: 20px; }
 .brand-rule { width: 1px; height: 34px; background: var(--rule); }
 .brand-title { display: flex; flex-direction: column; gap: 3px; line-height: 1.1; }
@@ -174,22 +172,14 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
   font-size: clamp(48px, 5.8vw, 84px); font-weight: 800; line-height: 1.0;
   letter-spacing: -.025em; margin: 20px 0 26px;
 }
-/* One gradient across the whole headline, so the two lines read as one mark rather than two
-   stripes: Splunk pink at the top left running to Splunk orange at the bottom right. */
-.display.splunk {
-  background: var(--splunk-gradient); -webkit-background-clip: text; background-clip: text;
-  color: transparent; width: fit-content; padding-right: .04em;
-}
-.display.splunk span { background: none; }
+/* Each letter carries its own solid colour from Splunk's gradient (see pages.gradient_lines), so
+   the headline is ordinary text to the browser and as sharp as the screen allows. */
 .tagline {
   font-size: clamp(20px, 1.9vw, 25px); line-height: 1.4; font-weight: 500; color: var(--white);
   letter-spacing: -.01em; max-width: 28em; margin: 0 0 18px;
 }
-@media (min-width: 1021px) { .display span { white-space: nowrap; } }
-.display span {
-  display: block; padding-bottom: .04em;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+@media (min-width: 1021px) { .display .line { white-space: nowrap; } }
+.display .line { display: block; padding-bottom: .04em; }
 .hero .lede { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 34em; margin: 0; }
 .bring { font-size: 16px; color: var(--muted); margin: 20px 0 0; }
 .bring strong { color: var(--white); }

@@ -186,3 +186,59 @@ def test_the_export_is_a_csv_attachment(client):
     response = client.get("/admin/export.csv")
     assert response.headers["content-disposition"].endswith('filename="lab-roster.csv"')
     assert "ada@example.com" in response.text
+
+
+def admin(client):
+    client.post("/admin/login", data={"password": "test-admin"})
+    return client
+
+
+def test_the_admin_page_can_change_the_passphrase(client):
+    """The repository is public, so the passphrase has to be settable without touching it."""
+    admin(client).post("/admin/passphrase", data={"passphrase": "  new-room-phrase  "})
+    old = client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada", "email": "ada@example.com"})
+    assert old.status_code == 403
+    new = client.post("/register", data={
+        "passphrase": "new-room-phrase", "name": "Ada", "email": "ada@example.com"})
+    assert new.status_code == 200
+    assert store.by_email("ada@example.com") is not None
+
+
+def test_a_short_passphrase_is_refused_and_nothing_changes(client):
+    page = admin(client).post("/admin/passphrase", data={"passphrase": "abc"}).text
+    assert "at least 6 characters" in page
+    assert store.get_config("passphrase") == (None, None)
+
+
+def test_a_stranger_cannot_change_the_passphrase(client):
+    response = client.post("/admin/passphrase", data={"passphrase": "hijacked-phrase"},
+                           follow_redirects=False)
+    assert response.status_code == 303
+    assert store.get_config("passphrase") == (None, None)
+
+
+def test_changing_the_passphrase_logs_that_it_changed_but_not_to_what(client):
+    admin(client).post("/admin/passphrase", data={"passphrase": "secret-room-phrase"})
+    events = store.recent_events()
+    assert any(e["kind"] == "config-changed" and e["detail"] == "passphrase" for e in events)
+    assert not any("secret-room-phrase" in e["detail"] for e in events)
+
+
+def test_the_tab_icon_is_the_badge(client):
+    icon = client.get("/favicon.ico")
+    assert icon.status_code == 200
+    assert icon.headers["content-type"] == "image/x-icon"
+    page = client.get("/").text
+    assert 'href="/static/icon-32.png"' in page and 'href="/static/apple-touch-icon.png"' in page
+    assert "favicon.svg" not in page
+    assert client.get("/static/icon-192.png").status_code == 200
+
+
+def test_the_headline_is_solid_letters_in_splunk_colours(client):
+    """No gradient clipped to text anywhere: that is what looked grainy on a Retina screen."""
+    page = client.get("/").text
+    assert 'aria-label="Splunk Agent Observability"' in page
+    assert '<span style="color: #EB008B">S</span>' in page
+    assert '<span style="color: #F99D1C">y</span>' in page
+    assert "background-clip: text" not in client.get("/static/app.css").text

@@ -41,6 +41,21 @@
   </div>
 
   <section class="card">
+    <h2>Workshop passphrase</h2>
+    <p class="muted small">What you announce in the room. Nobody can check in, and no Galileo
+       account can be created, without it.
+       {% if passphrase_source == 'admin' %}Set on this page at {{ passphrase_changed_at|clock }}.
+       {% elif passphrase %}Set by the installer; change it here and this one takes over.
+       {% else %}<strong>Not set: check-in refuses everyone until you set one.</strong>{% endif %}</p>
+    <form method="post" action="/admin/passphrase" class="row-form" autocomplete="off">
+      <input name="passphrase" type="password" value="{{ passphrase }}" minlength="{{ min_passphrase }}"
+             required data-reveal-input placeholder="at least {{ min_passphrase }} characters">
+      <button type="button" class="ghost" data-reveal-toggle>Show</button>
+      <button type="submit">Save</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>Account creation</h2>
     {% if status.armed %}
       <p class="state on">&#9679; ARMED{% if status.identity.email %} as {{ status.identity.email }}{% endif %}

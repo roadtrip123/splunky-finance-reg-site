@@ -121,7 +121,7 @@ else
     done
     eval "$2=\$ANSWER"
   }
-  ask "Workshop passphrase, announced in the room (not echoed)" PASSPHRASE secret
+  ask "Workshop passphrase, announced in the room; changeable later in /admin (not echoed)" PASSPHRASE secret
   ask "Admin password for /admin (not echoed)" ADMIN_PASSWORD secret
   ask "Model gateway base URL, ending in /v1" LLM_URL
   ask "Model name the gateway expects" LLM_MODEL

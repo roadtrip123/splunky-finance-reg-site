@@ -9,6 +9,7 @@ import hmac
 import time
 from collections import defaultdict, deque
 
+from . import store
 from .config import settings
 
 PARTICIPANT_COOKIE = "lab_participant"
@@ -31,12 +32,25 @@ def unsign(signed):
     return value if hmac.compare_digest(mac, _mac(value)) else None
 
 
+MIN_PASSPHRASE = 6
+
+
+def current_passphrase():
+    """(passphrase, where it came from). One set on the admin page wins over the installer's, so it
+    can be changed on the day without touching the box, the .env or the public repository."""
+    value, updated_at = store.get_config("passphrase")
+    if value:
+        return value, "admin", updated_at
+    return settings.passphrase, "install", None
+
+
 def passphrase_ok(given):
     """Constant-time, and a passphrase that was never configured refuses everything rather than
     letting the whole room in."""
-    if not settings.passphrase:
+    expected, _, _ = current_passphrase()
+    if not expected:
         return False
-    return hmac.compare_digest((given or "").strip(), settings.passphrase)
+    return hmac.compare_digest((given or "").strip().encode(), expected.encode())
 
 
 def admin_password_ok(given):

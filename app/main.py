@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import store
@@ -31,3 +32,9 @@ app.include_router(admin.router)
 @app.get("/healthz", include_in_schema=False)
 def healthz():
     return {"ok": True, "dry_run": settings.dry_run, "armed": creator.armed}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Browsers ask for /favicon.ico whatever the page declares, and remember the answer."""
+    return FileResponse(ROOT / "app" / "static" / "favicon.ico", media_type="image/x-icon")

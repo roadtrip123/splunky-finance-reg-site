@@ -7,8 +7,10 @@ from ..config import settings
 from ..security import (
     ADMIN_COOKIE,
     COOKIE_MAX_AGE,
+    MIN_PASSPHRASE,
     admin_password_ok,
     client_ip,
+    current_passphrase,
     passphrase_attempts,
     sign,
     unsign,
@@ -25,14 +27,21 @@ def signed_in(request):
 
 
 def dashboard(request, message="", error=""):
+    passphrase, source, changed_at = current_passphrase()
+    missing = [name for name in settings.missing()
+               if not (name == "LAB_PASSPHRASE" and passphrase)]
     return templates.TemplateResponse(request, "admin.html", {
+        "passphrase": passphrase,
+        "passphrase_source": source,
+        "passphrase_changed_at": changed_at,
+        "min_passphrase": MIN_PASSPHRASE,
         "counts": store.counts(),
         "roster": store.roster(),
         "boxes": store.boxes(),
         "events": store.recent_events(30),
         "status": creator.status(),
         "settings": settings,
-        "missing": settings.missing(),
+        "missing": missing,
         "message": message,
         "error": error,
     })
@@ -119,6 +128,20 @@ async def upload_pool(request: Request, file: UploadFile = File(None), pasted: s
         return dashboard(request, error="No email addresses in that upload.")
     added, duplicates = store.add_pool(emails)
     return dashboard(request, message=f"Added {added} fallback accounts, skipped {duplicates}.")
+
+
+@router.post("/passphrase", response_class=HTMLResponse)
+def set_passphrase(request: Request, passphrase: str = Form("")):
+    denied = guard(request)
+    if denied:
+        return denied
+    value = passphrase.strip()
+    if len(value) < MIN_PASSPHRASE:
+        return dashboard(request, error=f"The passphrase needs at least {MIN_PASSPHRASE} "
+                                        "characters, so it cannot be guessed in a few tries.")
+    store.set_config("passphrase", value)
+    return dashboard(request, message="Passphrase changed. The old one stops working now; anyone "
+                                      "already checked in keeps their lab.")
 
 
 @router.post("/arm", response_class=HTMLResponse)
