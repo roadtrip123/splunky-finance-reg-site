@@ -29,21 +29,35 @@
         </p>
       {% endif %}
     </div>
-    <div class="hero-side">
-      {% if video %}
-        {# youtube-nocookie: no YouTube cookies until someone presses play. #}
-        <div class="video">
-          <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}?rel=0"
-                  title="{{ video.title }}" loading="lazy"
-                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-        </div>
-      {% endif %}
-      {% include "_checkin.html" %}
-    </div>
+    {% include "_checkin.html" %}
   </div>
 </section>
 <div class="stripe band" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+{% if video %}
+<section class="section watch">
+  <span class="bar blue" aria-hidden="true"></span>
+  <p class="eyebrow">Why it matters</p>
+  <h2 class="headline">Trust AI <span class="hl">at scale.</span></h2>
+  <div class="watch-grid">
+    <div class="video">
+      {# youtube-nocookie: no YouTube cookies until someone presses play. #}
+      <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}?rel=0"
+              title="{{ video.title }}" loading="lazy"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+    <div class="watch-copy">
+      <p>Agents now answer customers, look up accounts and call tools on their own. When one gets
+         it wrong, you need to see it happen, measure it, and stop it before it reaches the
+         customer.</p>
+      <p>That is this lab: your own AI agent, traced in Splunk Agent Observability, scored by
+         evaluators, and held back by a guardrail.</p>
+      <p class="textlinks"><a href="/briefing">Read the briefing &rarr;</a></p>
+    </div>
+  </div>
+</section>
+{% endif %}
 
 <section class="section">
   <span class="bar cyan" aria-hidden="true"></span>

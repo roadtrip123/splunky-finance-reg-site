@@ -319,10 +319,11 @@ def test_the_evaluator_steps_name_the_model_from_the_settings(client):
     assert '<span class="model-alias">Another Gateway Model</span>' in client.get("/lab").text
 
 
-def test_the_overview_embeds_the_video_above_check_in(client):
+def test_the_overview_gives_the_video_its_own_section_under_the_hero(client):
     page = client.get("/").text
     video = page.index('src="https://www.youtube-nocookie.com/embed/QAbMEZI2NdM?rel=0"')
-    assert video < page.index('id="check-in"')
+    assert page.index('id="check-in"') < video < page.index("How it runs")
+    assert "Why it matters" in page and 'title="Trust AI at scale"' in page
     assert 'loading="lazy"' in page and "allowfullscreen" in page
     assert "youtube-nocookie" not in client.get("/register").text
 

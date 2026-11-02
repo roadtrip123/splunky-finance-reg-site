@@ -91,8 +91,8 @@ HOUSE_RULES = [
 ]
 
 
-# The video above the check-in card on the overview. An empty id removes it.
-HERO_VIDEO = {"id": "QAbMEZI2NdM", "title": "Workshop video"}
+# The video in its own section under the overview's hero. An empty id removes the section.
+OVERVIEW_VIDEO = {"id": "QAbMEZI2NdM", "title": "Trust AI at scale"}
 
 
 # ---------------------------------------------------------------- the headline
