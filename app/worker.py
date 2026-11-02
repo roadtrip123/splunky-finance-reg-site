@@ -1,7 +1,8 @@
 """The background account creator.
 
-The admin token lives here and nowhere else: in memory, in one object, cleared on disarm and lost
-on restart. That is deliberate, so an AMI made from this box carries no Galileo credential.
+The admin key lives here, in memory, and in one file in a tmpfs runtime directory so that a
+restart or an update re-arms on its own. It never reaches a disk, so an image of this box carries
+no Galileo credential, and a reboot or Disarm forgets it.
 
 Three states matter to a participant standing in the room:
   armed      accounts are created for the address they registered with
@@ -9,6 +10,8 @@ Three states matter to a participant standing in the room:
              from the pool instead of being left staring at a spinner
   dry run    nothing leaves the box; their own address is echoed back as if it had been created
 """
+import json
+import os
 import threading
 import time
 
@@ -23,6 +26,7 @@ MAX_ATTEMPTS = 3
 class Creator:
     def __init__(self):
         self._lock = threading.Lock()
+        self._api_key = ""
         self._token = ""
         self._identity = {}
         self._armed_at = None
@@ -34,22 +38,84 @@ class Creator:
 
     # ------------------------------------------------------------ arming
 
-    def arm(self, api_key):
-        """Exchange the key for a bearer token and keep the token only. The key itself is not
-        stored, so it cannot be read back out of the process by anything short of a debugger."""
+    def arm(self, api_key, remember=True):
+        """Exchange the key for a bearer token. The key is kept too, in memory and in a tmpfs file
+        beside it, so a restart or an update re-arms on its own and an expired token can be
+        swapped for a fresh one mid-event. Nothing reaches a disk or a snapshot: a reboot, or
+        Disarm, forgets it."""
         token, identity = galileo.exchange_api_key(settings.galileo_api_url, api_key)
         with self._lock:
+            self._api_key = api_key
             self._token = token
             self._identity = identity
             self._armed_at = time.time()
             self.last_error = ""
+        if remember:
+            self._remember(api_key, identity)
         return identity
 
     def disarm(self):
         with self._lock:
+            self._api_key = ""
             self._token = ""
             self._identity = {}
             self._armed_at = None
+        self._forget()
+
+    # ------------------------------------------------------------ surviving a restart
+
+    @property
+    def _keyfile(self):
+        return settings.runtime_dir / "galileo-admin.json"
+
+    def _remember(self, api_key, identity):
+        try:
+            settings.runtime_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            os.chmod(settings.runtime_dir, 0o700)
+            tmp = self._keyfile.with_suffix(".tmp")
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as handle:
+                json.dump({"api_key": api_key, "identity": identity, "saved_at": time.time()},
+                          handle)
+            os.replace(tmp, self._keyfile)
+        except OSError as error:
+            # Still armed, just not across a restart: say so rather than fail the arm.
+            self.last_error = f"armed, but not kept for restarts ({type(error).__name__})"
+
+    def _forget(self):
+        try:
+            self._keyfile.unlink()
+        except OSError:
+            pass
+
+    def restore(self):
+        """Re-arm from the kept key after a restart. A key Galileo no longer accepts is
+        forgotten, and the admin page says to arm again."""
+        try:
+            saved = json.loads(self._keyfile.read_text())
+        except (OSError, ValueError):
+            return False
+        try:
+            self.arm(saved["api_key"], remember=False)
+        except (galileo.GalileoError, KeyError) as error:
+            self._forget()
+            self.last_error = f"the kept key no longer works, arm again ({error})"[:300]
+            return False
+        return True
+
+    def _refresh(self):
+        """Swap an expired token for a fresh one from the kept key. True if that worked."""
+        with self._lock:
+            api_key = self._api_key
+        if not api_key:
+            return False
+        try:
+            self.arm(api_key, remember=False)
+            return True
+        except galileo.GalileoError as error:
+            self.disarm()
+            self.last_error = f"token expired and the key was refused, arm again ({error})"[:300]
+            return False
 
     @property
     def armed(self):
@@ -73,6 +139,8 @@ class Creator:
     def start(self):
         if self._thread and self._thread.is_alive():
             return
+        if not settings.dry_run:
+            self.restore()
         self._stop.clear()
         self._thread = threading.Thread(target=self._loop, name="galileo-creator", daemon=True)
         self._thread.start()
@@ -143,6 +211,12 @@ class Creator:
                 settings.galileo_api_url, token, row["email"], password,
                 role=settings.galileo_role, first_name=first.strip() or "Workshop",
                 last_name=last.strip() or "Participant")
+        except galileo.Unauthorized:
+            # Usually an expired session token. Put the row back and, if the kept key still
+            # works, carry on with a fresh token; otherwise the page says to arm again.
+            store.requeue(row["id"], "admin token expired; refreshing")
+            self._refresh()
+            return None
         except galileo.Duplicate:
             # Taken, but not in this organisation: an account elsewhere on the platform, which
             # would need an invitation to reach this console. A workshop account, at once.

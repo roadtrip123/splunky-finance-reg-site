@@ -186,3 +186,73 @@ def test_an_account_elsewhere_gets_a_workshop_account_at_once(armed, monkeypatch
     assert row["galileo_state"] == "pool" and row["attempts"] == 1
     assert row["galileo_email"] == "participant1@galileo.ai"
     assert "outside this organisation" in row["galileo_error"]
+
+
+def test_arming_keeps_the_key_in_a_private_runtime_file(armed):
+    import os
+
+    from app.config import settings
+    keyfile = settings.runtime_dir / "galileo-admin.json"
+    assert keyfile.exists()
+    assert oct(os.stat(keyfile).st_mode & 0o777) == "0o600"
+    assert oct(os.stat(settings.runtime_dir).st_mode & 0o777) == "0o700"
+
+
+def test_a_restart_re_arms_from_the_kept_key(armed, monkeypatch):
+    from app.worker import Creator
+    exchanged = []
+    monkeypatch.setattr(galileo, "exchange_api_key",
+                        lambda url, key: exchanged.append(key) or ("fresh-token", {"email": "a@x"}))
+    restarted = Creator()
+    assert restarted.restore() is True
+    assert restarted.armed and exchanged == ["an-api-key"]
+
+
+def test_disarming_forgets_the_kept_key(armed):
+    from app.config import settings
+    from app.worker import Creator
+    creator.disarm()
+    assert not (settings.runtime_dir / "galileo-admin.json").exists()
+    assert Creator().restore() is False
+
+
+def test_a_kept_key_galileo_refuses_is_forgotten_and_said_so(armed, monkeypatch):
+    from app.config import settings
+    from app.worker import Creator
+    monkeypatch.setattr(galileo, "exchange_api_key", lambda url, key: (_ for _ in ()).throw(
+        galileo.GalileoError("key exchange refused: HTTP 401")))
+    restarted = Creator()
+    assert restarted.restore() is False
+    assert "arm again" in restarted.last_error
+    assert not (settings.runtime_dir / "galileo-admin.json").exists()
+
+
+def test_an_expired_token_is_refreshed_from_the_kept_key(armed, monkeypatch):
+    tokens = []
+    monkeypatch.setattr(galileo, "exchange_api_key",
+                        lambda url, key: (f"token-{len(tokens)}", {}))
+
+    def create(url, token, email, password, **kw):
+        tokens.append(token)
+        if len(tokens) == 1:
+            raise galileo.Unauthorized("admin token rejected (401)")
+        return email
+
+    monkeypatch.setattr(galileo, "create_user", create)
+    a_participant()
+    creator.tick()          # 401: requeued and the token refreshed
+    creator.tick()          # succeeds with the fresh token
+    assert tokens == ["a-token", "token-1"]
+    assert store.by_email("ada@example.com")["galileo_state"] == "ready"
+
+
+def test_a_refused_refresh_disarms_and_says_to_arm_again(armed, monkeypatch):
+    monkeypatch.setattr(galileo, "create_user", lambda *a, **k: (_ for _ in ()).throw(
+        galileo.Unauthorized("admin token rejected (401)")))
+    monkeypatch.setattr(galileo, "exchange_api_key", lambda url, key: (_ for _ in ()).throw(
+        galileo.GalileoError("key exchange refused: HTTP 401")))
+    a_participant()
+    creator.tick()
+    assert not creator.armed
+    assert "arm again" in creator.status()["last_error"]
+    assert store.by_email("ada@example.com")["galileo_state"] == "queued"

@@ -106,14 +106,15 @@
     {% if status.armed %}
       <p class="state on">&#9679; ARMED{% if status.identity.email %} as {{ status.identity.email }}{% endif %}
          {% if status.armed_at %}since {{ status.armed_at|clock }}{% endif %}</p>
-      <p class="muted small">Created in this session: {{ status.created_here }}.
-         The token is in memory only and is lost on restart.</p>
+      <p class="muted small">Created since the last restart: {{ status.created_here }}.
+         Stays armed through restarts and updates; a reboot or Disarm forgets the key. It is kept
+         in memory-backed storage only, never on disk or in a snapshot of this box.</p>
       <form method="post" action="/admin/disarm"><button class="danger">Disarm</button></form>
     {% else %}
       <p class="state off">&#9675; DISARMED</p>
       <p class="muted small">Nothing is being created. Anyone registering now waits two minutes
          and is then handed a fallback account, if any are left. Paste a Galileo admin API key to
-         arm; it is exchanged for a token and the key itself is not kept.</p>
+         arm. It stays armed through restarts and updates until a reboot or Disarm.</p>
       <form method="post" action="/admin/arm" class="row-form" autocomplete="off">
         <input name="api_key" type="password" placeholder="Galileo admin API key" required>
         <button type="submit">Arm</button>

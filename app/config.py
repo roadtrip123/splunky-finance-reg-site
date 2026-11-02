@@ -56,6 +56,12 @@ class Settings:
         self.stuck_minutes = _int("STUCK_MINUTES", 10)
         self.port = _int("PORT", 8099)
         self.db_path = Path(os.environ.get("LAB_DB") or DATA / "lab.db")
+        # Memory-backed, so the armed Galileo key survives restarts and updates but never reaches
+        # a disk or a snapshot, and a reboot forgets it. systemd's RuntimeDirectory when the unit
+        # has one, otherwise /dev/shm, which is tmpfs on Ubuntu.
+        self.runtime_dir = Path(os.environ.get("LAB_RUNTIME_DIR")
+                                or os.environ.get("RUNTIME_DIRECTORY")
+                                or f"/dev/shm/lab-portal-{os.getuid()}")
         # A generated secret logs everyone out on restart, which is survivable: the cookie only
         # carries a participant token that the database can hand back from their email.
         self.session_secret = os.environ.get("SESSION_SECRET") or secrets.token_urlsafe(32)

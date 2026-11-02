@@ -36,17 +36,19 @@ seconds, so the instance URL appears at once and the account arrives while they 
 | --- | --- |
 | Upload instances | the Splunk Show URLs, as a CSV with a `url` column or one per line |
 | Upload fallback accounts | the pre-made `participantN@galileo.ai` list, used only if creation fails |
-| Arm account creation | paste a Galileo admin API key; it is exchanged for a token held in memory |
+| Arm account creation | paste a Galileo admin API key; it stays armed through restarts and updates |
 | Watch the roster | who has what, which accounts are created, which fell back, which failed |
 | Release or retry | free an instance for somebody else, or try a failed account again |
 | Progress | a row per person, steps 1 to 8: seen on their instance, ticked by them, or under way, with who has been stuck over ten minutes |
 | Settings | the passphrase, the model gateway (checked on save), the Galileo account password and the admin password |
 | Export | the whole roster as CSV |
 
-**Arming is deliberately not persistent.** The admin token lives in one object in memory, is
-cleared on disarm, and is lost on restart, so an AMI made from this box carries no Galileo
-credential. It has to be armed again after a reboot. While it is disarmed, anyone who registers
-waits two minutes and is then handed a fallback account.
+**Arming survives restarts but not reboots.** The admin key is kept in memory and in a file in
+the service's runtime directory, which is tmpfs: an update or a restart re-arms on its own, and an
+expired Galileo session token is swapped for a fresh one without anyone noticing. Nothing reaches
+a disk, so an image of this box carries no Galileo credential, and a reboot or Disarm forgets the
+key. While it is disarmed, anyone who registers waits two minutes and is then handed a fallback
+account.
 
 ## Progress tracking
 

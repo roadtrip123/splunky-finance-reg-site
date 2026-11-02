@@ -267,7 +267,7 @@ Before the room fills up:
   1. Sign in at $URL/admin
   2. Upload the Splunk Show instance URLs. Do not include this box's own URL.
   3. Upload the fallback account list, if you have one.
-  4. Arm account creation with a Galileo admin API key. It is held in memory only, so it is
-     never in a snapshot of this box, and it has to be armed again after a reboot.
+  4. Arm account creation with a Galileo admin API key. It stays armed through restarts and
+     updates, is kept in memory-backed storage only, never in a snapshot, and a reboot forgets it.
 
 DONE

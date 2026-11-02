@@ -20,6 +20,10 @@ ProtectSystem=full
 ProtectHome=read-only
 # The roster is the only thing the service writes, and it is the only thing worth keeping.
 ReadWritePaths=__ROOT__/data
+# tmpfs for the armed Galileo key: kept across restarts and updates, gone on reboot.
+RuntimeDirectory=lab-portal
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
 
 [Install]
 WantedBy=multi-user.target

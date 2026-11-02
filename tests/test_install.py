@@ -102,3 +102,10 @@ def test_uninstall_can_hand_the_box_back():
 
 def test_uninstall_keeps_the_roster_unless_told_otherwise():
     assert "roster left in" in UNINSTALL
+
+
+def test_the_unit_keeps_a_private_tmpfs_directory_across_restarts():
+    """Where the armed Galileo key lives: it must outlive a restart, and not a reboot."""
+    assert "RuntimeDirectory=lab-portal" in UNIT
+    assert "RuntimeDirectoryMode=0700" in UNIT
+    assert "RuntimeDirectoryPreserve=yes" in UNIT

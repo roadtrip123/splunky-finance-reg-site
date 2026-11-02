@@ -7,6 +7,7 @@ from pathlib import Path
 TMP = Path(tempfile.mkdtemp(prefix="lab-portal-tests-"))
 os.environ.update({
     "LAB_DB": str(TMP / "test.db"),
+    "LAB_RUNTIME_DIR": str(TMP / "run"),
     "LAB_PASSPHRASE": "test-passphrase",
     "ADMIN_PASSWORD": "test-admin",
     "LLM_BASE_URL": "https://llm.example/v1",
@@ -43,7 +44,7 @@ def fresh():
     security.passphrase_attempts.hits.clear()
     security.registrations.hits.clear()
     settings.dry_run = False
-    creator.disarm()
+    creator.disarm()  # also forgets any kept key
     creator.last_error = ""
     yield
 

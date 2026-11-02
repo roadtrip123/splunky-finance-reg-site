@@ -28,6 +28,10 @@ class GalileoError(Exception):
     """A failure worth showing on the admin page. The message never carries the key or token."""
 
 
+class Unauthorized(GalileoError):
+    """The admin token was refused, usually because the session behind it expired."""
+
+
 class Duplicate(GalileoError):
     """Galileo already has an account for this email. Retrying can never succeed."""
 
@@ -89,7 +93,7 @@ def find_user(api_url, token, email):
                         headers={"Authorization": f"Bearer {token}"},
                         json={"filters": [{"name": "email", "value": email, "operator": "eq"}]})
     if response.status_code == 401:
-        raise GalileoError("admin token rejected (401), re-arm with a fresh API key")
+        raise Unauthorized("admin token rejected (401), re-arm with a fresh API key")
     if response.status_code != 200:
         raise GalileoError(f"user lookup failed: HTTP {response.status_code}")
     users = response.json().get("users", [])
@@ -104,7 +108,7 @@ def create_user(api_url, token, email, password, role="user", first_name="", las
     response = _request("POST", f"{api_url}/signup_link", params={"user_email": email},
                         headers=headers)
     if response.status_code == 401:
-        raise GalileoError("admin token rejected (401), re-arm with a fresh API key")
+        raise Unauthorized("admin token rejected (401), re-arm with a fresh API key")
     if response.status_code != 200:
         raise _refused("signup_link", response)
     signup_url = response.json().get("signup_url")
