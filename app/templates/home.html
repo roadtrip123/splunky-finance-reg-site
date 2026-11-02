@@ -29,7 +29,18 @@
         </p>
       {% endif %}
     </div>
-    {% include "_checkin.html" %}
+    <div class="hero-side">
+      {% if video %}
+        {# youtube-nocookie: no YouTube cookies until someone presses play. #}
+        <div class="video">
+          <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}?rel=0"
+                  title="{{ video.title }}" loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+      {% endif %}
+      {% include "_checkin.html" %}
+    </div>
   </div>
 </section>
 <div class="stripe band" aria-hidden="true"><i></i><i></i><i></i><i></i></div>

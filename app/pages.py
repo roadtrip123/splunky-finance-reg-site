@@ -91,6 +91,10 @@ HOUSE_RULES = [
 ]
 
 
+# The video above the check-in card on the overview. An empty id removes it.
+HERO_VIDEO = {"id": "QAbMEZI2NdM", "title": "Workshop video"}
+
+
 # ---------------------------------------------------------------- the headline
 
 HEADLINE = ["Splunk Agent", "Observability"]

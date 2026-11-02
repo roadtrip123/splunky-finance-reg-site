@@ -157,7 +157,7 @@ button.link {
 button.link:hover { text-decoration: underline; transform: none; box-shadow: none; }
 
 /* ---------- hero ---------- */
-.hero { padding: 84px 24px 92px; }
+.hero { padding: 52px 24px 92px; }
 .hero-grid {
   max-width: var(--width); margin: 0 auto; display: grid; gap: 56px; align-items: center;
   grid-template-columns: minmax(0, 1.32fr) minmax(0, .84fr);
@@ -194,23 +194,32 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
 .event span { color: var(--orange); }
 .event em { color: var(--cisco-blue); font-style: normal; }
 
+/* ---------- video above the check-in card ---------- */
+.hero-side { display: grid; gap: 20px; min-width: 0; }
+.video {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #000;
+  border: var(--line) solid var(--rule); border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+}
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
 /* ---------- check-in card ---------- */
 .checkin {
   position: relative; border: var(--line) solid var(--medium-blue); border-radius: 18px;
-  padding: 30px 30px 28px; background: rgba(6, 21, 42, .82);
+  padding: 26px 28px 24px; background: rgba(6, 21, 42, .82);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
 }
 .checkin .eyebrow { letter-spacing: .34em; font-size: 12px; }
 .checkin-title { font-size: 24px; font-weight: 700; margin: 14px 0 6px; letter-spacing: -.02em; }
-.checkin-text { color: var(--muted); font-size: 15.5px; line-height: 1.55; margin: 12px 0 20px; }
+.checkin-text { color: var(--muted); font-size: 15.5px; line-height: 1.55; margin: 10px 0 16px; }
 .checkin-text a { word-break: break-all; }
 .form label {
-  display: block; margin-bottom: 16px; font-family: var(--mono); font-size: 10.5px;
+  display: block; margin-bottom: 13px; font-family: var(--mono); font-size: 10.5px;
   letter-spacing: .24em; text-transform: uppercase; color: var(--muted);
 }
 .form input, .row-form input, .stack-form textarea, .stack-form input[type=file] {
-  display: block; width: 100%; margin-top: 9px; padding: 13px 15px;
+  display: block; width: 100%; margin-top: 8px; padding: 11px 14px;
   font-family: var(--sans); font-size: 15px; letter-spacing: normal; text-transform: none;
   color: var(--fg); background: rgba(5, 17, 32, .85); border: var(--line) solid var(--rule);
   border-radius: 10px;

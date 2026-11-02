@@ -46,6 +46,7 @@ def home(request: Request):
     counts = store.counts()
     return page(request, "home.html", here="home", steps=steps, rules=pages.HOUSE_RULES,
                 headline=pages.gradient_lines(pages.HEADLINE),
+                video=pages.HERO_VIDEO if pages.HERO_VIDEO.get("id") else None,
                 counts=counts, closed=counts["participants"] >= settings.account_cap,
                 step_count=len(steps), step_word=pages.number_word(len(steps)))
 
