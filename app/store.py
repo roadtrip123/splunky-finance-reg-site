@@ -244,6 +244,47 @@ def remove_box(box_id):
     assign_waiting()
 
 
+class MoveRefused(Exception):
+    """A move that would take an instance from someone else, or point at something not a URL."""
+
+
+def move_to_box(participant_id, url):
+    """Point a participant at a specific instance: the one they actually work on, which may not be
+    the one they were given, such as a box they started before the site existed. An instance the
+    site does not know yet is added. Their previous instance goes back to the free list. Steps
+    already seen are kept, and the tracker reads the new instance on its next pass."""
+    url = clean_url(url).rstrip("/")
+    if not url:
+        raise MoveRefused("That is not an instance URL.")
+    with writing() as db:
+        person = db.execute("SELECT * FROM participants WHERE id=?", (participant_id,)).fetchone()
+        if not person:
+            raise MoveRefused("No such participant.")
+        known = [r for r in db.execute("SELECT * FROM boxes")
+                 if (clean_url(r["url"]) or "").rstrip("/") == url]
+        box = known[0] if known else None
+        if box and box["participant_id"] and box["participant_id"] != participant_id:
+            holder = db.execute("SELECT name, email FROM participants WHERE id=?",
+                                (box["participant_id"],)).fetchone()
+            who = f"{holder['name']} ({holder['email']})" if holder else "someone else"
+            raise MoveRefused(f"That instance is already given to {who}. Release it first.")
+        if box is None:
+            box_id = db.execute("INSERT INTO boxes (url, label) VALUES (?, 'moved here')",
+                                (url,)).lastrowid
+        else:
+            box_id = box["id"]
+        if person["box_id"] and person["box_id"] != box_id:
+            db.execute("UPDATE boxes SET state='free', participant_id=NULL, assigned_at=NULL"
+                       " WHERE id=?", (person["box_id"],))
+        db.execute("UPDATE boxes SET state='assigned', participant_id=?, assigned_at=? WHERE id=?",
+                   (participant_id, time.time(), box_id))
+        db.execute("UPDATE participants SET box_id=?, state='active' WHERE id=?",
+                   (box_id, participant_id))
+        log(db, "moved", f"participant={participant_id} box={box_id}")
+    assign_waiting()
+    return url
+
+
 def malformed_boxes():
     return [b for b in boxes() if not clean_url(b["url"])]
 

@@ -215,6 +215,13 @@
             {% if row.box_id %}
               <form method="post" action="/admin/release/{{ row.id }}"><button class="link">release</button></form>
             {% endif %}
+            <details class="move">
+              <summary class="link">change instance</summary>
+              <form method="post" action="/admin/move/{{ row.id }}" class="row-form move-form">
+                <input name="url" type="url" required placeholder="https://their-instance.splunk.show">
+                <button type="submit">Move</button>
+              </form>
+            </details>
           </td>
         </tr>
       {% endfor %}

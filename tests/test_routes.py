@@ -341,3 +341,21 @@ def test_the_stylesheet_and_script_urls_change_with_their_content(client, tmp_pa
     monkeypatch.setattr(templating, "STATIC", tmp_path)
     assert templating.asset("app.css") != f"/static/app.css?v={css.group(1)}"
     assert client.get(f"/static/app.css?v={css.group(1)}").status_code == 200
+
+
+def test_the_admin_page_can_change_someones_instance(client):
+    add_boxes(1)
+    person, _ = store.register("Mohamed", "mo@example.com")
+    page = admin(client).post(f"/admin/move/{person['id']}",
+                              data={"url": "https://galileo2-own-box.example.show"}).text
+    assert "Moved to https://galileo2-own-box.example.show" in page
+    assert store.by_email("mo@example.com")["box_url"] == "https://galileo2-own-box.example.show"
+
+
+def test_a_stranger_cannot_move_anyone(client):
+    add_boxes(1)
+    person, _ = store.register("Mohamed", "mo@example.com")
+    response = client.post(f"/admin/move/{person['id']}",
+                           data={"url": "https://elsewhere.example.show"}, follow_redirects=False)
+    assert response.status_code == 303
+    assert store.by_email("mo@example.com")["box_url"] == "https://p01.example.show"

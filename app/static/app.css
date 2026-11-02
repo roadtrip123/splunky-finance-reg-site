@@ -533,7 +533,14 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
            color: var(--dim); font-weight: 500; }
 .grid td { color: var(--muted); }
 .grid .small { font-family: var(--mono); font-size: 12px; }
-.row-buttons { display: flex; gap: 8px; }
+.row-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+.move summary { list-style: none; cursor: pointer; color: var(--cisco-blue); font-family: var(--mono);
+                font-size: 12px; padding: 2px 4px; }
+.move summary::-webkit-details-marker { display: none; }
+.move[open] summary { color: var(--white); }
+.move-form { margin-top: 8px; min-width: 340px; }
+.move-form input { font-size: 13px; padding: 8px 10px; }
+.move-form button { padding: 8px 14px; font-size: 13px; }
 .badge { display: inline-block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em;
          text-transform: uppercase; padding: 3px 10px; border-radius: 100px;
          border: var(--line) solid var(--rule); color: var(--fg); }

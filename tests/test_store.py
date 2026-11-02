@@ -152,3 +152,47 @@ def test_removing_an_instance_puts_its_holder_back_in_line():
     # They are served the remaining free instance rather than left with nothing.
     assert store.by_email("first@example.com")["box_url"] == "https://p02.example.show"
     assert store.counts()["boxes_total"] == 1
+
+
+def test_moving_someone_to_the_instance_they_actually_use():
+    """Mohamed was given one box and worked on another he had started himself."""
+    add_boxes(2)
+    person, _ = store.register("Mohamed", "mo@example.com")
+    given = person["box_id"]
+    moved = store.move_to_box(person["id"], "https://galileo2-own-box.example.show/")
+    assert moved == "https://galileo2-own-box.example.show"
+    row = store.by_email("mo@example.com")
+    assert row["box_url"] == "https://galileo2-own-box.example.show"
+    old = next(b for b in store.boxes() if b["id"] == given)
+    assert old["state"] == "free" and old["participant_id"] is None
+
+
+def test_moving_onto_a_known_instance_reuses_it_whatever_the_trailing_slash():
+    add_boxes(2)
+    person, _ = store.register("Mohamed", "mo@example.com")
+    store.move_to_box(person["id"], "https://p02.example.show/")
+    assert store.counts()["boxes_total"] == 2
+    assert store.by_email("mo@example.com")["box_url"] == "https://p02.example.show"
+
+
+def test_moving_onto_someone_elses_instance_is_refused():
+    add_boxes(2)
+    first, _ = store.register("First", "first@example.com")
+    second, _ = store.register("Second", "second@example.com")
+    with pytest.raises(store.MoveRefused, match="already given to First"):
+        store.move_to_box(second["id"], first["box_url"])
+    assert store.by_email("second@example.com")["box_id"] == second["box_id"]
+
+
+def test_moving_to_something_that_is_not_a_url_is_refused():
+    person, _ = store.register("Mohamed", "mo@example.com")
+    with pytest.raises(store.MoveRefused):
+        store.move_to_box(person["id"], "galileo2 box")
+
+
+def test_a_freed_instance_goes_to_whoever_is_waiting():
+    add_boxes(1)
+    mover, _ = store.register("Mover", "mover@example.com")
+    waiting, _ = store.register("Waiting", "waiting@example.com")
+    store.move_to_box(mover["id"], "https://own-box.example.show")
+    assert store.by_email("waiting@example.com")["box_url"] == "https://p01.example.show"

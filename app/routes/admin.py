@@ -299,6 +299,19 @@ def release(request: Request, participant_id: int):
     return dashboard(request, message="Instance released and offered to anyone waiting.")
 
 
+@router.post("/move/{participant_id}", response_class=HTMLResponse)
+def move(request: Request, participant_id: int, url: str = Form("")):
+    denied = guard(request)
+    if denied:
+        return denied
+    try:
+        moved_to = store.move_to_box(participant_id, url)
+    except store.MoveRefused as error:
+        return dashboard(request, error=str(error))
+    return dashboard(request, message=f"Moved to {moved_to}. The progress board reads it on its "
+                                      "next pass, within about 30 seconds.")
+
+
 @router.post("/retry/{participant_id}", response_class=HTMLResponse)
 def retry(request: Request, participant_id: int):
     denied = guard(request)
