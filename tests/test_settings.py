@@ -98,6 +98,7 @@ def test_an_unreachable_gateway_is_reported(monkeypatch):
 def test_changing_the_galileo_password_spares_existing_accounts(client, monkeypatch):
     from app import galileo
     monkeypatch.setattr(galileo, "exchange_api_key", lambda url, key: ("token", {}))
+    monkeypatch.setattr(galileo, "find_user", lambda url, token, email: None)
     used = []
     monkeypatch.setattr(galileo, "create_user",
                         lambda url, token, email, password, **kw: used.append(password) or email)

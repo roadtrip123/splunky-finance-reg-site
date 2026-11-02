@@ -13,6 +13,8 @@ from tests.conftest import add_boxes
 def armed(monkeypatch):
     monkeypatch.setattr(galileo, "exchange_api_key",
                         lambda api_url, key: ("a-token", {"email": "admin@example.com"}))
+    # Nobody already has an account unless a test says otherwise.
+    monkeypatch.setattr(galileo, "find_user", lambda api_url, token, email: None)
     creator.arm("an-api-key")
     assert creator.armed
     return creator
@@ -149,3 +151,38 @@ def test_nobody_waits_more_than_five_minutes_even_when_armed(armed, monkeypatch)
     row = store.by_email("slow@example.com")
     assert row["galileo_state"] == "pool"
     assert row["galileo_email"] == "participant1@galileo.ai"
+
+
+def test_a_member_of_the_organisation_keeps_their_own_account(armed, monkeypatch):
+    """Nothing is created for them, so no invitation goes out and no duplicate is attempted."""
+    monkeypatch.setattr(galileo, "find_user",
+                        lambda api_url, token, email: {"id": "u1", "email": email, "role": "user"})
+    monkeypatch.setattr(galileo, "create_user", lambda *a, **k: pytest.fail("created a duplicate"))
+    a_participant("member@example.com")
+    creator.tick()
+    row = store.by_email("member@example.com")
+    assert row["galileo_state"] == "existing" and row["galileo_email"] == "member@example.com"
+    assert row["galileo_password"] == "" and row["galileo_error"] == ""
+
+
+def test_a_read_only_member_is_flagged_for_the_instructor(armed, monkeypatch):
+    monkeypatch.setattr(galileo, "find_user",
+                        lambda api_url, token, email: {"id": "u1", "role": "read_only"})
+    a_participant("viewer@example.com")
+    creator.tick()
+    row = store.by_email("viewer@example.com")
+    assert row["galileo_state"] == "existing"
+    assert "read-only" in row["galileo_error"]
+
+
+def test_an_account_elsewhere_gets_a_workshop_account_at_once(armed, monkeypatch):
+    def taken(*a, **k):
+        raise galileo.Duplicate("signup_link: email already has a Galileo account (HTTP 409)")
+    monkeypatch.setattr(galileo, "create_user", taken)
+    store.add_pool(["participant1@galileo.ai"])
+    a_participant("elsewhere@example.com")
+    creator.tick()
+    row = store.by_email("elsewhere@example.com")
+    assert row["galileo_state"] == "pool" and row["attempts"] == 1
+    assert row["galileo_email"] == "participant1@galileo.ai"
+    assert "outside this organisation" in row["galileo_error"]

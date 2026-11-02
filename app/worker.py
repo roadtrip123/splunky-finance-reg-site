@@ -128,10 +128,29 @@ class Creator:
             token = self._token
         password = runtime.get("galileo_password")
         try:
+            # Already a member of this organisation: they keep their own login, and nothing is
+            # created, so no invitation goes out and no duplicate is attempted.
+            existing = galileo.find_user(settings.galileo_api_url, token, row["email"])
+            if existing:
+                note = ""
+                if existing.get("role") == "read_only":
+                    note = ("existing account is read-only, so it cannot create a project; "
+                            "raise its role in Galileo")
+                store.set_galileo(row["id"], "existing", email=row["email"], error=note,
+                                  password="")
+                return row["email"]
             galileo.create_user(
                 settings.galileo_api_url, token, row["email"], password,
                 role=settings.galileo_role, first_name=first.strip() or "Workshop",
                 last_name=last.strip() or "Participant")
+        except galileo.Duplicate:
+            # Taken, but not in this organisation: an account elsewhere on the platform, which
+            # would need an invitation to reach this console. A workshop account, at once.
+            note = "has a Galileo account outside this organisation; given a workshop account"
+            if not store.issue_pool_account(row["id"], note=note):
+                store.set_galileo(row["id"], "failed", error=note.split(";")[0] +
+                                  "; no workshop account left to give")
+            return None
         except galileo.GalileoError as error:
             self.last_error = str(error)[:300]
             if row["attempts"] >= MAX_ATTEMPTS:

@@ -273,3 +273,11 @@ def test_a_stranger_cannot_remove_an_instance(client):
     response = client.post(f"/admin/boxes/{store.boxes()[0]['id']}/remove", follow_redirects=False)
     assert response.status_code == 303
     assert store.counts()["boxes_total"] == 1
+
+
+def test_someone_with_their_own_account_is_not_shown_the_shared_password(registered):
+    person = store.by_email("ada@example.com")
+    store.set_galileo(person["id"], "existing", email="ada@example.com", password="")
+    galileo = registered.get("/api/credentials").json()["galileo"]
+    assert galileo["ready"] and galileo["existing"]
+    assert galileo["email"] == "ada@example.com" and galileo["password"] == ""

@@ -421,8 +421,9 @@ def requeue(participant_id, error=""):
             (error[:500], participant_id))
 
 
-def issue_pool_account(participant_id):
-    """Last resort when the Galileo API will not play: hand out one of the pre-made accounts."""
+def issue_pool_account(participant_id, note=""):
+    """Last resort when the Galileo API will not play: hand out one of the pre-made accounts.
+    note says why, for the roster."""
     with writing() as db:
         row = db.execute("SELECT * FROM pool WHERE state='free' ORDER BY id LIMIT 1").fetchone()
         if not row:
@@ -432,9 +433,9 @@ def issue_pool_account(participant_id):
         # Fallback accounts were made ahead of time with the installer's password, whatever the
         # admin page has set since.
         db.execute(
-            "UPDATE participants SET galileo_state='pool', galileo_email=?, galileo_error='',"
+            "UPDATE participants SET galileo_state='pool', galileo_email=?, galileo_error=?,"
             " galileo_password=? WHERE id=?",
-            (row["email"], settings.galileo_password, participant_id))
+            (row["email"], note[:500], settings.galileo_password, participant_id))
         log(db, "galileo-pool", f"participant={participant_id} {row['email']}")
         return row["email"]
 

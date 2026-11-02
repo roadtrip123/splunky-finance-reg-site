@@ -12,6 +12,7 @@ pacing, because /signup_link and /system_users sit behind a rate limiter:
 /signup_link always sends a real invitation email. Nobody needs to open it, since the password is
 already set by the time they read their details, but it does arrive.
 """
+import re
 import time
 from urllib.parse import parse_qs, urlparse
 
@@ -25,6 +26,21 @@ TIMEOUT = 30
 
 class GalileoError(Exception):
     """A failure worth showing on the admin page. The message never carries the key or token."""
+
+
+class Duplicate(GalileoError):
+    """Galileo already has an account for this email. Retrying can never succeed."""
+
+
+# Galileo's exact wording for a taken email is not documented, so this matches loosely.
+TAKEN = re.compile(r"already|exist|duplicate|taken|in use|registered", re.I)
+
+
+def _refused(step, response):
+    text = response.text[:160]
+    if response.status_code == 409 or (response.status_code in (400, 422) and TAKEN.search(text)):
+        return Duplicate(f"{step}: email already has a Galileo account (HTTP {response.status_code})")
+    return GalileoError(f"{step} failed: HTTP {response.status_code} {text}")
 
 
 def _request(method, url, **kwargs):
@@ -67,8 +83,22 @@ def whoami(api_url, token):
     return response is not None and response.status_code < 300
 
 
+def find_user(api_url, token, email):
+    """The user in this organisation with this email, as Galileo describes them, or None."""
+    response = _request("POST", f"{api_url}/users/all", params={"limit": 1, "starting_token": 0},
+                        headers={"Authorization": f"Bearer {token}"},
+                        json={"filters": [{"name": "email", "value": email, "operator": "eq"}]})
+    if response.status_code == 401:
+        raise GalileoError("admin token rejected (401), re-arm with a fresh API key")
+    if response.status_code != 200:
+        raise GalileoError(f"user lookup failed: HTTP {response.status_code}")
+    users = response.json().get("users", [])
+    return users[0] if users else None
+
+
 def create_user(api_url, token, email, password, role="user", first_name="", last_name=""):
-    """Create one user with the shared password. Raises GalileoError with a short reason."""
+    """Create one user with the shared password. Raises Duplicate when the email is taken and
+    GalileoError for anything else, each with a short reason."""
     headers = {"Authorization": f"Bearer {token}"}
 
     response = _request("POST", f"{api_url}/signup_link", params={"user_email": email},
@@ -76,7 +106,7 @@ def create_user(api_url, token, email, password, role="user", first_name="", las
     if response.status_code == 401:
         raise GalileoError("admin token rejected (401), re-arm with a fresh API key")
     if response.status_code != 200:
-        raise GalileoError(f"signup_link failed: HTTP {response.status_code} {response.text[:160]}")
+        raise _refused("signup_link", response)
     signup_url = response.json().get("signup_url")
     if not signup_url:
         raise GalileoError("no signup_url returned; the invitation-link feature flag may be off")
@@ -89,19 +119,17 @@ def create_user(api_url, token, email, password, role="user", first_name="", las
                         json={"email": email, "password": password, "first_name": first_name,
                               "last_name": last_name, "auth_method": "email"})
     if response.status_code != 200:
-        raise GalileoError(f"system_users failed: HTTP {response.status_code} {response.text[:160]}")
+        raise _refused("system_users", response)
     time.sleep(REQUEST_DELAY)
 
     if role and role != "read_only":
-        response = _request("POST", f"{api_url}/users/all", params={"limit": 1, "starting_token": 0},
-                            headers=headers,
-                            json={"filters": [{"name": "email", "value": email, "operator": "eq"}]})
-        if response.status_code != 200:
-            raise GalileoError(f"created, but lookup failed: HTTP {response.status_code}")
-        users = response.json().get("users", [])
-        if not users:
+        try:
+            user = find_user(api_url, token, email)
+        except GalileoError as error:
+            raise GalileoError(f"created, but {error}") from None
+        if not user:
             raise GalileoError("created, but the user could not be found afterwards")
-        response = _request("PUT", f"{api_url}/users/{users[0]['id']}", headers=headers,
+        response = _request("PUT", f"{api_url}/users/{user['id']}", headers=headers,
                             json={"role": role})
         if response.status_code != 200:
             raise GalileoError(f"created, but the role stayed default: HTTP {response.status_code}")

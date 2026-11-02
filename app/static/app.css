@@ -520,6 +520,7 @@ button.link:hover { text-decoration: underline; transform: none; box-shadow: non
 .badge.ready { border-color: var(--green); color: #7CCB52; }
 .badge.queued, .badge.creating { border-color: var(--cisco-blue); color: var(--cisco-blue); }
 .badge.pool { border-color: var(--orange); color: var(--orange); }
+.badge.existing { border-color: var(--medium-blue); color: #8FB6FF; }
 .badge.failed { border-color: var(--red); color: var(--red); }
 .events { list-style: none; padding: 0; margin: 0; font-size: 12.5px; font-family: var(--mono); }
 .events li { padding: 8px 0; border-bottom: var(--line) solid var(--hair); color: var(--muted); }

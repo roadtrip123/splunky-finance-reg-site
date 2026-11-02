@@ -75,7 +75,8 @@ def credentials(request: Request):
     participant = current_participant(request)
     if not participant:
         return JSONResponse({"error": "not registered"}, status_code=401)
-    galileo_ready = participant["galileo_state"] in ("ready", "pool")
+    galileo_ready = participant["galileo_state"] in ("ready", "pool", "existing")
+    existing = participant["galileo_state"] == "existing"
     ahead = 0 if galileo_ready else store.queue_position(participant["id"])
     return {
         "instance": {
@@ -90,8 +91,9 @@ def credentials(request: Request):
             "queue_ahead": ahead,
             "queue_seconds": ahead * 4,
             "email": participant["galileo_email"] if galileo_ready else "",
+            "existing": existing,
             "password": (participant["galileo_password"] or runtime.get("galileo_password"))
-                        if galileo_ready else "",
+                        if galileo_ready and not existing else "",
             "console_url": settings.galileo_console_url,
             "api_url": settings.galileo_api_url,
             "agent_control_url": settings.galileo_agent_control_url,

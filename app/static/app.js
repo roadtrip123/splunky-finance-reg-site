@@ -45,7 +45,12 @@
     parts.push(row("Presenter password", data.instance.presenter_password));
 
     parts.push("<h3>Galileo</h3>");
-    if (data.galileo.ready) {
+    if (data.galileo.ready && data.galileo.existing) {
+      parts.push(row("Your account", data.galileo.email));
+      parts.push('<div class="detail"><span>Password</span><span>You already have a Galileo ' +
+        "account, so sign in with the password you normally use. Forgotten it? Use " +
+        "<strong>Forgot password</strong> on the console sign-in page.</span></div>");
+    } else if (data.galileo.ready) {
       parts.push(row("Your account", data.galileo.email));
       parts.push(row("Password", data.galileo.password, { secret: true }));
     } else {

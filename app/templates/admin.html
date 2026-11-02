@@ -39,6 +39,7 @@
     <div class="tile {% if counts.waiting %}amber{% endif %}">
       <b>{{ counts.waiting }}</b><span>waiting for an instance</span></div>
     <div class="tile"><b>{{ counts.galileo.get('ready', 0) }}</b><span>accounts created</span></div>
+    <div class="tile"><b>{{ counts.galileo.get('existing', 0) }}</b><span>own existing account</span></div>
     <div class="tile {% if counts.galileo.get('pool', 0) %}amber{% endif %}">
       <b>{{ counts.galileo.get('pool', 0) }}</b><span>on fallback accounts</span></div>
     <div class="tile {% if counts.galileo.get('failed', 0) %}red{% endif %}">
