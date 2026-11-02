@@ -58,7 +58,7 @@ def status(request: Request):
     return {
         "name": participant["name"],
         "email": participant["email"],
-        "box_url": participant["box_url"] or "",
+        "box_url": store.clean_url(participant["box_url"]),
         "galileo_state": participant["galileo_state"],
         "galileo_email": participant["galileo_email"],
         "waiting_for_instance": participant["box_id"] is None,
@@ -77,7 +77,7 @@ def credentials(request: Request):
     ahead = 0 if galileo_ready else store.queue_position(participant["id"])
     return {
         "instance": {
-            "url": participant["box_url"] or "",
+            "url": store.clean_url(participant["box_url"]),
             "account": settings.bank_account,
             "password": settings.bank_password,
             "presenter_password": settings.presenter_password,

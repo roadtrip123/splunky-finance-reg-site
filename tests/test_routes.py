@@ -242,3 +242,34 @@ def test_the_headline_is_solid_letters_in_splunk_colours(client):
     assert '<span style="color: #EB008B">S</span>' in page
     assert '<span style="color: #F99D1C">y</span>' in page
     assert "background-clip: text" not in client.get("/static/app.css").text
+
+
+def test_a_malformed_instance_row_is_never_shown_to_anyone(client):
+    """Defence in depth: even a row stored before the parser was fixed stays out of sight."""
+    leaked = "Hunter2-Secret\tssh -p 2222 splunk@3.91.84.26\thttps://p01.example.show"
+    store.add_boxes([(leaked, "")])
+    client.post("/register", data={
+        "passphrase": "test-passphrase", "name": "Ada Lovelace", "email": "ada@example.com"})
+    assert client.get("/api/credentials").json()["instance"]["url"] == ""
+    assert client.get("/api/status").json()["box_url"] == ""
+    assert "Hunter2" not in client.get("/").text
+    page = admin(client).get("/admin").text
+    assert "Hunter2" not in page
+    assert "not a URL" in page and "Probably a whole line" in page
+    assert "Hunter2" not in client.get("/admin/export.csv").text
+
+
+def test_the_admin_page_lists_instances_and_can_remove_one(client):
+    add_boxes(2)
+    page = admin(client).get("/admin").text
+    assert "https://p01.example.show" in page and "https://p02.example.show" in page
+    box = store.boxes()[0]
+    client.post(f"/admin/boxes/{box['id']}/remove")
+    assert [b["url"] for b in store.boxes()] == ["https://p02.example.show"]
+
+
+def test_a_stranger_cannot_remove_an_instance(client):
+    add_boxes(1)
+    response = client.post(f"/admin/boxes/{store.boxes()[0]['id']}/remove", follow_redirects=False)
+    assert response.status_code == 303
+    assert store.counts()["boxes_total"] == 1

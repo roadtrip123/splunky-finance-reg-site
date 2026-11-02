@@ -114,3 +114,41 @@ def test_the_export_carries_what_the_instructor_needs():
     text = store.export_csv()
     assert text.splitlines()[0] == "name,email,box_url,galileo_email,galileo_state,registered_at"
     assert "Ada Lovelace,ada@example.com,https://p01.example.show,ada@example.com,ready," in text
+
+
+SPLUNK_SHOW_EXPORT = ("sshPassword{d}sshUrl{d}url\n"
+                      "Hunter2-Secret{d}ssh -p 2222 splunk@3.91.84.26{d}https://p01.example.show\n"
+                      "Hunter2-Secret{d}ssh -p 2222 splunk@3.232.133.207{d}https://p02.example.show.\n")
+
+
+def test_the_splunk_show_export_parses_in_any_separator_and_keeps_only_urls():
+    """The platform's export carries an SSH password in every row. A tab-separated copy once came
+    through as whole lines, password included, ready to be shown to a participant as their app."""
+    for delimiter in (",", "\t", ";"):
+        rows = store.parse_csv(SPLUNK_SHOW_EXPORT.format(d=delimiter))
+        assert rows == [("https://p01.example.show", ""), ("https://p02.example.show", "")], delimiter
+        assert "Hunter2" not in repr(rows)
+
+
+def test_uploading_the_export_stores_no_password():
+    store.add_boxes(store.parse_csv(SPLUNK_SHOW_EXPORT.format(d="\t")))
+    stored = [box["url"] for box in store.boxes()]
+    assert stored == ["https://p01.example.show", "https://p02.example.show"]
+
+
+def test_clean_url_accepts_only_a_bare_url():
+    assert store.clean_url(" https://p01.example.show ") == "https://p01.example.show"
+    assert store.clean_url("https://p01.example.show.") == "https://p01.example.show"
+    for bad in ("sshPassword\tsshUrl\turl", "Secret\tssh -p 2222 x\thttps://p01.example.show",
+                "ftp://p01.example.show", "p01.example.show", "https://", "", None,
+                "javascript:alert(1)"):
+        assert store.clean_url(bad) == "", bad
+
+
+def test_removing_an_instance_puts_its_holder_back_in_line():
+    add_boxes(2)
+    first, _ = store.register("First", "first@example.com")
+    store.remove_box(first["box_id"])
+    # They are served the remaining free instance rather than left with nothing.
+    assert store.by_email("first@example.com")["box_url"] == "https://p02.example.show"
+    assert store.counts()["boxes_total"] == 1

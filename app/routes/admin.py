@@ -38,6 +38,7 @@ def dashboard(request, message="", error=""):
         "counts": store.counts(),
         "roster": store.roster(),
         "boxes": store.boxes(),
+        "malformed": store.malformed_boxes(),
         "events": store.recent_events(30),
         "status": creator.status(),
         "settings": settings,
@@ -111,6 +112,15 @@ async def upload_boxes(request: Request, file: UploadFile = File(None), pasted: 
     if duplicates:
         note += f", skipped {duplicates} already known"
     return dashboard(request, message=note + ".")
+
+
+@router.post("/boxes/{box_id}/remove", response_class=HTMLResponse)
+def remove_box(request: Request, box_id: int):
+    denied = guard(request)
+    if denied:
+        return denied
+    store.remove_box(box_id)
+    return dashboard(request, message="Instance removed.")
 
 
 @router.post("/pool", response_class=HTMLResponse)

@@ -3,8 +3,9 @@
   {% if participant %}
     <p class="eyebrow cyan"><span class="live-dot"></span>Checked in</p>
     <h2 class="checkin-title">Welcome back, {{ participant.name.split(' ')[0] }}.</h2>
-    <p class="checkin-text">Your instance{% if participant.box_url %} is
-      <a href="{{ participant.box_url }}" target="_blank" rel="noopener">{{ participant.box_url }}</a>{% else %}
+    {% set box_url = participant.box_url|clean_url %}
+    <p class="checkin-text">Your instance{% if box_url %} is
+      <a href="{{ box_url }}" target="_blank" rel="noopener">{{ box_url }}</a>{% else %}
       is on its way: your instructor is adding more{% endif %}. Everything else is in your lab
       details.</p>
     <a class="button wide" href="/my-lab">Open my lab</a>

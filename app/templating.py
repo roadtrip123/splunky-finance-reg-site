@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import pages
 from .config import ROOT
+from .store import clean_url
 
 templates = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
 BRAND_LOGO = ROOT / "app" / "static" / "brand" / "splunk-logo.svg"
@@ -24,5 +25,6 @@ def brand_logo():
 
 
 templates.env.filters["clock"] = clock
+templates.env.filters["clean_url"] = clean_url
 templates.env.globals["nav"] = pages.NAV
 templates.env.globals["brand_logo"] = brand_logo

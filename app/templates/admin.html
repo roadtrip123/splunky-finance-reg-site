@@ -20,6 +20,12 @@
     <div class="notice warn"><strong>Not configured:</strong> {{ missing|join(', ') }}.
       Set these in <code>.env</code> and restart, or participants will see blanks.</div>
   {% endif %}
+  {% if malformed %}
+    <div class="notice bad"><strong>{{ malformed|length }} instance row{{ 's' if malformed|length != 1 }}
+      {{ 'are' if malformed|length != 1 else 'is' }} not a URL.</strong> Probably a whole line of a
+      tab-separated export, which can include the SSH password. Nobody is shown them, but remove
+      them below.</div>
+  {% endif %}
   {% if status.dry_run %}
     <div class="notice warn"><strong>Dry run.</strong> No Galileo account is really created;
       each participant is shown their own address as if it had been. Set <code>DRY_RUN=0</code>
@@ -88,6 +94,29 @@
       <textarea name="pasted" rows="4" placeholder="https://p01.splunk.show&#10;https://p02.splunk.show"></textarea>
       <button type="submit">Add instances</button>
     </form>
+    {% if boxes %}
+    <table class="grid" style="margin-top: 20px">
+      <thead><tr><th>#</th><th>Instance</th><th>State</th><th>Given to</th><th></th></tr></thead>
+      <tbody>
+      {% for box in boxes %}
+        {% set url = box.url|clean_url %}
+        <tr>
+          <td class="small">{{ box.id }}</td>
+          <td class="small">{% if url %}<a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>
+              {% else %}<span class="badge failed">not a URL</span>
+              <span class="muted">{{ box.url|length }} characters, not shown</span>{% endif %}</td>
+          <td><span class="badge {{ 'ready' if box.state == 'assigned' else '' }}">{{ box.state }}</span></td>
+          <td class="small">{{ box.participant_email or '' }}</td>
+          <td class="row-buttons">
+            <form method="post" action="/admin/boxes/{{ box.id }}/remove"
+                  onsubmit="return confirm('Remove this instance? Whoever has it goes back to waiting.')">
+              <button class="link">remove</button></form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
   </section>
 
   <section class="card">
@@ -115,7 +144,7 @@
           <td class="small">{{ row.created_at|clock }}</td>
           <td>{{ row.name }}{% if row.state == 'released' %}<span class="small muted"> left</span>{% endif %}</td>
           <td class="small">{{ row.email }}</td>
-          <td class="small">{{ row.box_url or 'waiting' }}</td>
+          <td class="small">{{ row.box_url|clean_url or ('not a URL' if row.box_url else 'waiting') }}</td>
           <td>
             <span class="badge {{ row.galileo_state }}">{{ row.galileo_state }}</span>
             {% if row.galileo_email %}<span class="small">{{ row.galileo_email }}</span>{% endif %}

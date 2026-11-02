@@ -6,10 +6,12 @@ inside one write transaction rather than being two statements that happen to be 
 """
 import csv
 import io
+import re
 import secrets
 import sqlite3
 import time
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 from .config import settings
 
@@ -175,25 +177,60 @@ def add_pool(emails):
     return added, duplicates
 
 
+URL = re.compile(r"https?://[^\s,;\"'<>|]+", re.I)
+
+
+def clean_url(value):
+    """The value if it is nothing but an http(s) URL, otherwise "". Anything that reaches a
+    participant passes through here, so a malformed row, which may carry an SSH password from the
+    platform's export, is never shown to anyone."""
+    value = (value or "").strip()
+    if not URL.fullmatch(value):
+        return ""
+    parsed = urlparse(value)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.netloc:
+        return ""
+    return value.rstrip(".")
+
+
 def parse_csv(text):
-    """Accept a CSV with a url column, or a bare list of URLs one per line. Participants' box
-    lists arrive from the lab platform in whatever shape it exports, so both are allowed."""
-    text = text.lstrip("﻿")
-    first = next((line for line in text.splitlines() if line.strip()), "")
-    rows = []
-    if "," in first or "\t" in first:
-        reader = csv.DictReader(io.StringIO(text))
-        fields = [f.lower().strip() for f in (reader.fieldnames or [])]
-        if "url" in fields:
-            for row in reader:
-                clean = {(k or "").lower().strip(): (v or "").strip() for k, v in row.items()}
-                rows.append((clean.get("url", ""), clean.get("label") or clean.get("name", "")))
-            return rows
-    for line in text.splitlines():
-        line = line.strip().strip(",")
-        if line and not line.lower().startswith(("url", "#")):
-            rows.append((line.split(",")[0].strip(), ""))
-    return rows
+    """Instance URLs from whatever the lab platform exported: comma, tab or semicolon separated,
+    with or without a header, or a bare list one per line. Only the URL is kept. Other columns,
+    such as sshPassword and sshUrl in the Splunk Show export, are read past and never stored."""
+    lines = [line for line in text.lstrip("\ufeff").splitlines() if line.strip()]
+    if not lines:
+        return []
+    try:
+        delimiter = csv.Sniffer().sniff("\n".join(lines[:5]), delimiters=",\t;|").delimiter
+    except csv.Error:
+        delimiter = "\t" if "\t" in lines[0] else ","
+    rows = list(csv.reader(lines, delimiter=delimiter))
+    header = [cell.strip().lower() for cell in rows[0]]
+    url_col = header.index("url") if "url" in header else None
+    label_col = next((header.index(n) for n in ("label", "name") if n in header), None)
+    found = []
+    for row in rows:
+        cells = [cell.strip() for cell in row]
+        preferred = [cells[url_col]] if url_col is not None and url_col < len(cells) else []
+        url = next((clean for clean in map(clean_url, preferred + cells) if clean), "")
+        if url:
+            label = cells[label_col] if label_col is not None and label_col < len(cells) else ""
+            found.append((url, label))
+    return found
+
+
+def remove_box(box_id):
+    """Take an instance off the list. Whoever had it goes back to waiting and is served the next
+    free one, so removing a bad row never leaves someone holding nothing."""
+    with writing() as db:
+        db.execute("UPDATE participants SET box_id=NULL WHERE box_id=?", (box_id,))
+        db.execute("DELETE FROM boxes WHERE id=?", (box_id,))
+        log(db, "box-removed", f"box={box_id}")
+    assign_waiting()
+
+
+def malformed_boxes():
+    return [b for b in boxes() if not clean_url(b["url"])]
 
 
 # ---------------------------------------------------------------- registration
@@ -462,7 +499,7 @@ def export_csv():
         writer.writerow({
             "name": row["name"],
             "email": row["email"],
-            "box_url": row["box_url"] or "",
+            "box_url": clean_url(row["box_url"]),
             "galileo_email": row["galileo_email"],
             "galileo_state": row["galileo_state"],
             "registered_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row["created_at"])),
