@@ -175,7 +175,7 @@
     toggle.textContent = hidden ? "Hide" : "Show";
   });
 
-  /* "Mark step done" under the steps the tracker cannot see on the participant's instance. */
+  /* "Mark step done" under every step. */
   document.addEventListener("click", function (event) {
     var toggle = event.target.closest("[data-step-toggle]");
     if (!toggle) return;

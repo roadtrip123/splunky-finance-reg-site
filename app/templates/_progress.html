@@ -20,7 +20,7 @@
     <table class="grid board">
       <thead><tr>
         <th>Who</th>
-        {% for n in range(1, 9) %}<th class="c" title="{{ 'ticked by the participant' if n in self_steps else 'seen on their instance' }}">{{ n }}</th>{% endfor %}
+        {% for n in range(1, 9) %}<th class="c" title="{{ 'ticked by the participant' if n in self_steps else 'seen on their instance or ticked' }}">{{ n }}</th>{% endfor %}
         <th>On</th><th>Their instance</th>
       </tr></thead>
       <tbody>
@@ -47,7 +47,7 @@
     </table>
     <p class="legend small muted">
       <span class="mark auto">&#9679;</span> seen on their instance
-      <span class="mark self">&#10003;</span> ticked by them (steps {{ self_steps|join(', ') }})
+      <span class="mark self">&#10003;</span> ticked by them
       <span class="mark partial">&#9680;</span> under way
       <span class="mark implied">&#9675;</span> not seen, but a later step was
       <span class="mark none">&middot;</span> not yet

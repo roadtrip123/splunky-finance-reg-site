@@ -25,7 +25,8 @@ from .config import settings
 
 TIMEOUT = 8
 WORKERS = 8
-SELF_STEPS = (1, 4, 5, 6)  # the steps a participant ticks; 1 is also seen automatically
+SELF_STEPS = (1, 4, 5, 6)  # the steps only a tick can show; 1 is also seen automatically
+TICK_STEPS = tuple(range(1, 9))  # every step has a tick box, so the guide feels the same throughout
 GALILEO_CONNECTED = ("connected", "bound", "registered")
 
 

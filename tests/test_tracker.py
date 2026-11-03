@@ -1,6 +1,7 @@
 """The progress tracker: what an instance's status means for each step, how the tracker reads it,
 and what the admin board and the participant's buttons show. Payloads follow the shapes the
 Splunky Finance instance returns from /ready and /api/demo-admin/status."""
+import re
 import requests
 
 from app import store
@@ -152,22 +153,31 @@ def test_a_participant_ticks_and_unticks_a_console_step(registered):
     assert store.steps_for(person["id"], "self") == []
 
 
-def test_a_step_the_instance_shows_cannot_be_ticked(registered):
-    assert registered.post("/api/progress", json={"step": 7, "done": True}).status_code == 400
+def test_every_step_can_be_ticked_but_not_a_made_up_one(registered):
+    for step in range(1, 9):
+        assert registered.post("/api/progress", json={"step": step, "done": True}).status_code == 200
+    person = store.by_email("ada@example.com")
+    assert sorted(s["step"] for s in store.steps_for(person["id"], "self")) == list(range(1, 9))
+    assert registered.post("/api/progress", json={"step": 9, "done": True}).status_code == 400
+
+
+def test_the_guide_has_a_tick_box_under_every_step(registered):
+    found = []
+    for path in ("/briefing", "/lab"):
+        found += [int(n) for n in re.findall(r'class="step-done[^"]*" data-step="(\d+)"',
+                                              registered.get(path).text)]
+    assert found == list(range(1, 9))
 
 
 def test_ticking_needs_a_participant(client):
     assert client.post("/api/progress", json={"step": 4, "done": True}).status_code == 401
 
 
-def test_the_guide_offers_done_buttons_on_the_ticked_steps_only_when_checked_in(client):
+def test_the_guide_offers_done_buttons_only_when_checked_in(client):
     assert "data-step-toggle" not in client.get("/briefing").text
     client.post("/register", data={
         "passphrase": "test-passphrase", "name": "Ada Lovelace", "email": "ada@example.com"})
-    briefing, lab = client.get("/briefing").text, client.get("/lab").text
-    assert 'data-step="1"' in briefing and 'data-step="2"' not in briefing
-    assert 'data-step="4"' in lab and 'data-step="5"' in lab and 'data-step="6"' in lab
-    assert 'data-step="7"' not in lab
+    assert "data-step-toggle" in client.get("/briefing").text
 
 
 def test_the_admin_board_shows_people_and_needs_the_admin(client):

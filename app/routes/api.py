@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from .. import runtime, store
 from ..config import settings
 from ..pages import model_alias
-from ..tracker import SELF_STEPS
+from ..tracker import TICK_STEPS
 from .public import current_participant
 
 router = APIRouter(prefix="/api")
@@ -116,12 +116,13 @@ class Tick(BaseModel):
 
 @router.post("/progress")
 def tick(request: Request, body: Tick):
-    """A participant marking a step the tracker cannot see on their instance."""
+    """A participant marking a step done. Any step can be ticked; the board shows a step as done
+    whether it was ticked or seen on the instance."""
     participant = current_participant(request)
     if not participant:
         return JSONResponse({"error": "not registered"}, status_code=401)
-    if body.step not in SELF_STEPS:
-        return JSONResponse({"error": "that step is tracked automatically"}, status_code=400)
+    if body.step not in TICK_STEPS:
+        return JSONResponse({"error": "no such step"}, status_code=400)
     if body.done:
         store.mark_step(participant["id"], body.step, "self")
     else:
